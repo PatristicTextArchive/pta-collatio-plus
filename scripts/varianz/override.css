@@ -1,0 +1,23 @@
+/* PTA Collatio+: colours and fonts of the application (variant colours as in the synopsis:
+   orthographic yellow, substantive vermillion, omission grey, addition green, transposition purple) */
+:root {
+  --bg: #f5f6f8; --surface: #ffffff; --ink: #1d2733; --muted: #586577; --faint: #8794a4; --rule: #d8dde4; --rule-2: #e8ecf0;
+  --rubric: #34587a;
+  --c-lem: #e4e8ed; --c-orth: #b8a400; --c-ink: #1d2733; --c-seq: #34587a;
+  --c-subst: #d55e00; --c-add: #009e73; --c-transp: #cc79a7; --c-om: #7d8794;
+  --hatch: #b9c1cc;
+  --f-grc: "Gentium Plus", "Gentium Book Plus", "Noto Serif Armenian", "Noto Sans Syriac", "GFS Didot", "Noto Serif", serif;
+  --f-ui: "Source Sans 3", "Segoe UI", system-ui, -apple-system, sans-serif;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #161b22; --surface: #1d242d; --ink: #e6eaef; --muted: #9aa6b4; --faint: #6f7b8a; --rule: #2f3a46; --rule-2: #262e38;
+  --rubric: #8fb4d8;
+  --c-lem: #2b323b; --c-orth: #d4c11e; --c-ink: #e6eaef; --c-seq: #8fb4d8;
+  --c-subst: #ef7d33; --c-add: #2fbf95; --c-transp: #dc94bf; --c-om: #8a95a3; --hatch: #5b6676; } }
+:root[data-theme="dark"] {
+  --bg: #161b22; --surface: #1d242d; --ink: #e6eaef; --muted: #9aa6b4; --faint: #6f7b8a; --rule: #2f3a46; --rule-2: #262e38;
+  --rubric: #8fb4d8;
+  --c-lem: #2b323b; --c-orth: #d4c11e; --c-ink: #e6eaef; --c-seq: #8fb4d8;
+  --c-subst: #ef7d33; --c-add: #2fbf95; --c-transp: #dc94bf; --c-om: #8a95a3; --hatch: #5b6676; }
+.wrap { padding-block: 14px 24px; }
+header.work { border-bottom: 0; padding-bottom: 0; }

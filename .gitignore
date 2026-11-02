@@ -1,0 +1,46 @@
+# PTA Collatio+ – .gitignore
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+*.egg
+
+# Virtuelle Umgebungen (uv, venv)
+.venv/
+venv/
+env/
+.python-version
+
+# Tests und Werkzeuge
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.mypy_cache/
+.ruff_cache/
+.tox/
+
+# Java-Shim: Build-Verzeichnis (das fertige Jar liegt in vendor/ und wird eingecheckt)
+java-shim/build/
+*.class
+
+# Editoren und Betriebssysteme
+.vscode/
+.idea/
+*.swp
+*~
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Lokale Arbeitsdateien: Projekte, Alignments und Exporte, die beim Ausprobieren
+# im Repository des Werkzeugs entstehen. Projekte einer Edition gehören in deren Repository.
+/*.pta.json
+/*.alignment.json
+/*-synopse.html
+/*.kollation.xml
+/scratch/

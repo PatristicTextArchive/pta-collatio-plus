@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?xml-model href="http://www.tei-c.org/release/xml/tei/custom/schema/relaxng/tei_odds.rng" schematypens="http://relaxng.org/ns/structure/1.0"?>
+<TEI xmlns="http://www.tei-c.org/ns/1.0" xmlns:rng="http://relaxng.org/ns/structure/1.0"
+     xmlns:sch="http://purl.oclc.org/dsdl/schematron" xml:lang="de">
+  <teiHeader>
+    <fileDesc>
+      <titleStmt>
+        <title>TEI-PTA-Schema für Kollationsdateien</title>
+      </titleStmt>
+      <publicationStmt>
+        <p>Abgeleitet von tei-pta.odd (Patristic Text Archive, https://github.com/PatristicTextArchive/Schema), GPL-3.0.</p>
+      </publicationStmt>
+      <sourceDesc>
+        <p>Erstellt für PTA Collatio+.</p>
+      </sourceDesc>
+    </fileDesc>
+  </teiHeader>
+  <text>
+    <body>
+      <p>Diese ODD übernimmt das PTA-Schema unverändert bis auf eine Regel: Kollationsdateien
+        enthalten Variationsstellen (<gi>app</gi> mit <att>type</att>="variants"), für die noch keine
+        Lemma-Entscheidung gefallen ist. Die Schematron-Regel <q>Variation needs a lem</q> wird daher
+        zu einer Warnung herabgestuft. Sobald jede Variationsstelle ein <gi>lem</gi> hat, validiert
+        dieselbe Datei auch gegen <ident>tei-pta.odd</ident>.</p>
+      <p>Die kompilierten Fassungen <ident>tei-pta_collation.rng</ident> und
+        <ident>tei-pta_collation.sch</ident> werden mit <ident>scripts/derive_schema.py</ident> aus
+        den aktuellen Dateien des PTA-Schemas erzeugt, damit Änderungen am Haupt-Schema automatisch
+        übernommen werden.</p>
+      <schemaSpec ident="tei-pta_collation" start="TEI" source="tei-pta.odd">
+        <elementSpec ident="app" module="textcrit" mode="change">
+          <constraintSpec ident="app" scheme="schematron" mode="replace" xml:lang="eng">
+            <constraint>
+              <sch:rule context="tei:app">
+                <sch:report test="@type='witnesses' and (child::tei:lem or not(child::tei:rdg))">Attestation of witness needs rdg, but no lem</sch:report>
+                <sch:report role="warning" test="@type='variants' and not(child::tei:lem or child::tei:rdgGrp/tei:lem)">Variation has no lem yet (collation file)</sch:report>
+              </sch:rule>
+            </constraint>
+          </constraintSpec>
+        </elementSpec>
+      </schemaSpec>
+    </body>
+  </text>
+</TEI>

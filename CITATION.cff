@@ -1,0 +1,16 @@
+cff-version: 1.2.0
+message: "Wenn Sie diese Software verwenden, zitieren Sie sie bitte so. / If you use this software, please cite it as below."
+title: "PTA Collatio+"
+version: 0.1.0
+date-released: 2026-11-02
+license: MIT
+authors:
+  - family-names: "von Stockhausen"
+    given-names: "Annette"
+    orcid: "https://orcid.org/0000-0001-5382-6322"
+    affiliation: "Berlin-Brandenburgische Akademie der Wissenschaften"
+url: "https://pta.bbaw.de"
+references:
+  - type: software
+    title: "PTA-Collator"
+    url: "https://github.com/PatristicTextArchive/collator"

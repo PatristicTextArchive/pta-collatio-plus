@@ -1,0 +1,46 @@
+[project]
+name = "pta-collatio-plus"
+version = "0.1.0"
+description = "Kollation von PTA-Transkriptionen mit Web-Oberfläche, farbiger Synopse und TEI-Export nach PTA-Schema"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [{ name = "Annette von Stockhausen" }]
+classifiers = [
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Framework :: FastAPI",
+    "Topic :: Text Processing :: Markup :: XML",
+]
+
+dependencies = [
+    "lxml>=5",
+    "fastapi>=0.116",
+    "starlette>=0.47.2",     # security fixes (DoS in multipart and range handling)
+    "uvicorn>=0.30",
+    "h11>=0.16",             # security fix (request smuggling)
+    "jingtrang>=0.1",
+]
+
+[project.urls]
+Homepage = "https://pta.bbaw.de"
+"Based on" = "https://github.com/PatristicTextArchive/collator"
+
+[project.optional-dependencies]
+test = ["pytest>=8", "httpx>=0.27"]
+
+[project.scripts]
+pta-collate = "pta_collate.cli:main"
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["pta_collate", "pta_collate.align"]
+
+[tool.setuptools.package-data]
+pta_collate = ["static/*", "static/varianz/*", "static/fonts/*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

@@ -1,0 +1,339 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PTA Collatio+</title>
+<script src="/static/theme.js"></script>
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<header class="topbar">
+  <div class="brand">PTA Collatio+ <span class="muted" id="proj-name"></span></div>
+  <nav class="steps" aria-label="Arbeitsschritte">
+    <button data-view="prep"><span class="n">1</span><span class="lbl">Vorbereitung</span></button>
+    <button data-view="syn"><span class="n">2</span><span class="lbl">Synopse</span></button>
+    <button data-view="exp"><span class="n">3</span><span class="lbl">Export</span></button>
+    <button data-view="var"><span class="n">4</span><span class="lbl">Varianz</span></button>
+  </nav>
+  <div class="spacer"></div>
+  <a class="about-link" href="#about" data-view-link="about">Über</a>
+  <span class="lang-switch" role="group" aria-label="Sprache / Language" translate="no"><button type="button" data-lang="de">DE</button><button type="button" data-lang="en">EN</button></span>
+  <span class="lang-switch theme-switch" role="group" aria-label="Farbschema" translate="no"><button type="button" data-theme-set="auto" title="Farbschema wie im Betriebssystem" aria-label="Farbschema wie im Betriebssystem"><svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><circle cx="8" cy="8" r="6" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M8 2a6 6 0 0 1 0 12z" fill="currentColor"/></svg></button><button type="button" data-theme-set="light" title="Hell" aria-label="Hell"><svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><circle cx="8" cy="8" r="3" fill="currentColor"/><g stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M8 1v2M8 13v2M1 8h2M13 8h2M3.05 3.05l1.4 1.4M11.55 11.55l1.4 1.4M3.05 12.95l1.4-1.4M11.55 4.45l1.4-1.4"/></g></svg></button><button type="button" data-theme-set="dark" title="Dunkel" aria-label="Dunkel"><svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M13.5 10.2A6 6 0 0 1 5.8 2.5a6 6 0 1 0 7.7 7.7z" fill="currentColor"/></svg></button></span>
+  <div class="status" id="status"></div>
+  <button class="btn small" id="save-btn">Projekt speichern</button>
+</header>
+
+<main id="view-prep" class="prep" hidden>
+  <div>
+    <section class="panel">
+      <h2>Projekt</h2>
+      <p class="hint">Alle Einstellungen und Korrekturen werden in einer Projektdatei gespeichert, die neben die Transkriptionen ins Repository gehört.</p>
+      <div class="row">
+        <label class="grow"><span>Projektdatei<span class="info" tabindex="0" role="img" aria-label="JSON-Datei mit Zeugen, allen Einstellungen und dem Änderungsprotokoll. Daneben liegt das Ergebnis des Aligners (….alignment.json). Beide gehören ins Repository der Edition, damit die Kollation nachvollziehbar und wiederholbar ist." data-tip="JSON-Datei mit Zeugen, allen Einstellungen und dem Änderungsprotokoll. Daneben liegt das Ergebnis des Aligners (….alignment.json). Beide gehören ins Repository der Edition, damit die Kollation nachvollziehbar und wiederholbar ist.">i</span></span><input type="text" id="proj-path" placeholder="/pfad/zu/werk.pta.json"></label>
+        <button class="btn" id="proj-open">Öffnen</button>
+        <button class="btn" id="proj-browse">Durchsuchen</button>
+        <button class="btn" id="proj-new">Neues Projekt</button>
+      </div>
+      <div class="row">
+        <label class="grow">Titel<input type="text" data-p="title" placeholder="aus dem Strukturgeber übernommen"></label>
+        <label>Bearbeiter/in<input type="text" data-p="editor.name"></label>
+        <label>Kürzel (xml:id)<input type="text" data-p="editor.id" size="6"></label>
+      </div>
+      <div class="row">
+        <label class="grow"><span>Editions-URN<span class="info" tabindex="0" role="img" aria-label="Wird @n des Editionstextes im TEI und bestimmt den Dateinamen der Exporte (ohne „urn:cts:pta:“). Leer: …pta-grc1 aus der Werk-ID der Transkriptionen." data-tip="Wird @n des Editionstextes im TEI und bestimmt den Dateinamen der Exporte (ohne „urn:cts:pta:“). Leer: …pta-grc1 aus der Werk-ID der Transkriptionen.">i</span></span><input type="text" data-p="edition_urn" placeholder="urn:cts:pta:ptaXXXX.ptaYYY.pta-grc1"></label>
+      </div>
+          <h3 class="sub-h">Konjektoren und frühere Editionen<span class="info" tabindex="0" role="img" aria-label="Urheber von Konjekturen und Korrekturen, die im Detailfenster einer Stelle eingetragen werden. Personen werden im TEI über @resp angesprochen und in listPerson angelegt, Editionen über @source und listBibl. Eigene Konjekturen verweisen auf die Bearbeiterin bzw. den Bearbeiter oben." data-tip="Urheber von Konjekturen und Korrekturen, die im Detailfenster einer Stelle eingetragen werden. Personen werden im TEI über @resp angesprochen und in listPerson angelegt, Editionen über @source und listBibl. Eigene Konjekturen verweisen auf die Bearbeiterin bzw. den Bearbeiter oben.">i</span></h3>
+      <table class="wit src-table"><thead><tr><th>Kürzel (xml:id)</th><th>Name bzw. Kurztitel</th><th>Art</th><th>Normdaten / Link</th><th></th></tr></thead><tbody id="src-body"></tbody></table>
+      <div class="row"><button class="btn small" id="src-add">Person oder Edition hinzufügen</button></div>
+    </section>
+
+    <section class="panel">
+      <h2>Zeugen</h2>
+      <p class="hint">Reihenfolge = Spaltenfolge der Synopse und Reihenfolge der Sigla im TEI. Der Strukturgeber liefert Header, Gliederung und Interpunktion des invarianten Textes.</p>
+      <table class="wit">
+        <thead><tr><th></th><th>Kollationieren</th><th>Sigle</th><th>Handschrift</th><th>Korrekturschichten<span class="info" tabindex="0" role="img" aria-label="Für Transkriptionen mit del, add oder subst. „beide“: zwei Zeugen, * (ante correctionem, vor der Korrektur) und ᶜ (post correctionem). Im TEI werden daraus Lesarten mit @varSeq und, falls angegeben, @hand." data-tip="Für Transkriptionen mit del, add oder subst. „beide“: zwei Zeugen, * (ante correctionem, vor der Korrektur) und ᶜ (post correctionem). Im TEI werden daraus Lesarten mit @varSeq und, falls angegeben, @hand.">i</span></th><th>Strukturgeber<span class="info" tabindex="0" role="img" aria-label="Liefert für das TEI den Header (Titel, Autor, publicationStmt, refsDecl) und den Wortlaut des übereinstimmenden Textes zwischen den Variationsstellen." data-tip="Liefert für das TEI den Header (Titel, Autor, publicationStmt, refsDecl) und den Wortlaut des übereinstimmenden Textes zwischen den Variationsstellen.">i</span></th><th></th></tr></thead>
+        <tbody id="wit-body"></tbody>
+      </table>
+      <div class="row"><button class="btn" id="wit-add">Transkriptionen hinzufügen</button></div>
+    </section>
+
+    <section class="panel">
+      <h2>Abschnitte</h2>
+      <p class="hint">Der Text wird vor dem Alignment an gemeinsamen Ankern geteilt. „Automatisch“ nimmt Meilensteine, die alle Zeugen teilen, sonst die Textteile.</p>
+      <div class="row"><label><span>Teilung<span class="info" tabindex="0" role="img" aria-label="Jeder Abschnitt wird für sich ausgerichtet. Das verhindert Fehlzuordnungen über Abschnittsgrenzen und beschleunigt die Kollation. Meilensteine: milestone/@n; Textteile: div type=textpart. Im TEI wird daraus die Gliederung in div type=textpart." data-tip="Jeder Abschnitt wird für sich ausgerichtet. Das verhindert Fehlzuordnungen über Abschnittsgrenzen und beschleunigt die Kollation. Meilensteine: milestone/@n; Textteile: div type=textpart. Im TEI wird daraus die Gliederung in div type=textpart.">i</span></span><select id="seg-mode"></select></label></div>
+      <div class="segs" id="seg-list"></div>
+    </section>
+
+    <section class="panel">
+      <h2>Normalisierung</h2>
+      <p class="hint">Der Aligner vergleicht die normalisierte Form, Synopse und TEI zeigen den Originaltext.</p>
+      <div class="row"><label><span>Voreinstellung<span class="info" tabindex="0" role="img" aria-label="Standard: Akzente, Spiritus, Groß-/Kleinschreibung, Iota subscriptum, ν ephelkystikon und Interpunktion werden beim Ausrichten ignoriert. Diplomatisch: nur Interpunktion. Weitgehend: zusätzlich Itazismus beim Ausrichten gleichsetzen und Akzentunterschiede nicht als Variante werten." data-tip="Standard: Akzente, Spiritus, Groß-/Kleinschreibung, Iota subscriptum, ν ephelkystikon und Interpunktion werden beim Ausrichten ignoriert. Diplomatisch: nur Interpunktion. Weitgehend: zusätzlich Itazismus beim Ausrichten gleichsetzen und Akzentunterschiede nicht als Variante werten.">i</span></span><select id="norm-preset">
+        <option value="standard">Standard</option><option value="diplomatisch">Diplomatisch (nur Interpunktion)</option><option value="aggressiv">Weitgehend (Itazismus gleichsetzen)</option><option value="eigene">Eigene Einstellung</option>
+      </select></label>
+      <label><span>Nomina sacra<span class="info" tabindex="0" role="img" aria-label="aufgelöst: die Form in expan (θεοῦ) wird kollationiert. als Kürzel: die Form in abbr (θυ)." data-tip="aufgelöst: die Form in expan (θεοῦ) wird kollationiert. als Kürzel: die Form in abbr (θυ).">i</span></span><select data-p="nomina_sacra"><option value="expan">aufgelöst</option><option value="abbr">als Kürzel</option></select></label></div>
+      <div class="checks" id="norm-checks"></div>
+      <h4 style="margin:14px 0 4px;font-size:14px">Eigene Regeln (regulärer Ausdruck → Ersetzung, auf die normalisierte Form)<span class="info" tabindex="0" role="img" aria-label="Python-Syntax, angewendet auf die normalisierte Form (klein, ohne Akzente). Beispiel: Muster ^ουκ$ und Ersetzung ου setzt οὐκ und οὐ gleich." data-tip="Python-Syntax, angewendet auf die normalisierte Form (klein, ohne Akzente). Beispiel: Muster ^ουκ$ und Ersetzung ου setzt οὐκ und οὐ gleich.">i</span></h4>
+      <div class="rules" id="norm-rules"></div>
+      <button class="btn small" id="rule-add">Regel hinzufügen</button>
+    </section>
+
+    <section class="panel">
+      <h2>Prüfung der Transkriptionen</h2>
+      <p class="hint">Sucht nach Stellen, an denen eine Transkription vermutlich anders kodiert ist, als die Handschrift es meint. Die Fundstellen am besten in der Transkription korrigieren; alternativ kann die Kollation sie ausgleichen.</p>
+      <div class="row"><button class="btn" id="check-run">Transkriptionen prüfen</button><span class="muted" id="check-info"></span></div>
+      <div id="check-out"></div>
+      <div class="opts" style="margin-top:10px">
+        <label class="check"><input type="checkbox" id="join-breaks"> <span>Getrennte Wörter (fehlendes <code>break="no"</code>) bei der Kollation zusammenziehen</span></label>
+        <label class="check"><input type="checkbox" id="split-fused"> <span>Zusammengeschriebene Wörter (fehlender Wortzwischenraum) bei der Kollation trennen</span></label>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2>Alignment</h2>
+      <div class="form-grid">
+        <label for="al-engine">Verfahren<span class="info" tabindex="0" role="img" aria-label="Eingebaut: verankert Folgen aus vier Wörtern, die in beiden Texten genau einmal vorkommen, und richtet dazwischen mit Needleman-Wunsch (affine Lücken nach Gotoh, unscharfer Wortvergleich) aus; die Zeugen werden schrittweise zusammengeführt (Spencer/Howe). Literatur im README. CollateX Dekker: unabhängige Zweitmeinung, nur exakter Vergleich, braucht Java." data-tip="Eingebaut: verankert Folgen aus vier Wörtern, die in beiden Texten genau einmal vorkommen, und richtet dazwischen mit Needleman-Wunsch (affine Lücken nach Gotoh, unscharfer Wortvergleich) aus; die Zeugen werden schrittweise zusammengeführt (Spencer/Howe). Literatur im README. CollateX Dekker: unabhängige Zweitmeinung, nur exakter Vergleich, braucht Java.">i</span></label>
+        <div><select id="al-engine" class="wide"></select>
+          <p class="hint" id="al-note"></p></div>
+
+        <label for="al-threshold" class="eng-builtin">Ähnlichkeitsschwelle<span class="info" tabindex="0" role="img" aria-label="Normalisierte Levenshtein-Ähnlichkeit (1 − Editierabstand / Länge des längeren Wortes), ab der zwei verschiedene Wortformen in dieselbe Zeile gestellt werden. Bei 0,6: κομιζεσθαι/κομιζεσθε (0,8) ja, και/κατα (0,5) nein." data-tip="Normalisierte Levenshtein-Ähnlichkeit (1 − Editierabstand / Länge des längeren Wortes), ab der zwei verschiedene Wortformen in dieselbe Zeile gestellt werden. Bei 0,6: κομιζεσθαι/κομιζεσθε (0,8) ja, και/κατα (0,5) nein.">i</span></label>
+        <div class="eng-builtin"><input type="number" id="al-threshold" step="0.05" min="0" max="1" data-a="threshold" class="num">
+          <span class="hint-inline">Wortformen ab dieser Ähnlichkeit (0–1) gelten als dieselbe Stelle, z. B. κομίζεσθαι / κομίζεσθε.</span></div>
+        <span class="eng-builtin"></span>
+        <label class="check eng-builtin"><input type="checkbox" data-a="guide_tree"> Zeugen in der Reihenfolge ihrer Ähnlichkeit zusammenführen (Leitbaum)<span class="info" tabindex="0" role="img" aria-label="Zuerst werden die beiden ähnlichsten Zeugen ausgerichtet, dann jeweils der Zeuge, der einem der bereits aufgenommenen am ähnlichsten ist (Ähnlichkeit: Anteil gemeinsamer Wortpaare). Aus: Reihenfolge der Zeugenliste." data-tip="Zuerst werden die beiden ähnlichsten Zeugen ausgerichtet, dann jeweils der Zeuge, der einem der bereits aufgenommenen am ähnlichsten ist (Ähnlichkeit: Anteil gemeinsamer Wortpaare). Aus: Reihenfolge der Zeugenliste.">i</span></label>
+
+        <span class="eng-collatex"></span>
+        <p class="hint-inline eng-collatex">Dekker-Algorithmus: richtet an exakt gleichen normalisierten Wortfolgen aus („Inseln“), ohne unscharfen Wortvergleich. Als unabhängige Zweitmeinung zum eingebauten Verfahren gedacht.</p>
+      </div>
+
+      <h3 class="sub-h">Variationsstellen</h3>
+      <div class="opts">
+        <label class="check"><input type="checkbox" data-u="merge_adjacent"> <span>Benachbarte Stellen mit gleicher Zeugengruppierung zusammenfassen<span class="info" tabindex="0" role="img" aria-label="Folgen Variationsstellen aufeinander, an denen sich die Zeugen gleich gruppieren (z. B. jeweils La Vi gegen Pg Ps), werden sie zu einer Stelle, im TEI zu einem app." data-tip="Folgen Variationsstellen aufeinander, an denen sich die Zeugen gleich gruppieren (z. B. jeweils La Vi gegen Pg Ps), werden sie zu einer Stelle, im TEI zu einem app.">i</span></span></label>
+        <label class="check"><input type="checkbox" data-u="split_displaced"> <span>Verschobene Wörter von Ersetzungen trennen<span class="info" tabindex="0" role="img" aria-label="Hat der Aligner ein Wort gegen ein ganz anderes gestellt, während die übrigen Zeugen dasselbe Wort wenige Zeilen weiter haben (z. B. „καὶ … ἔλαβεν“ gegen „ἔλαβε …“), kommt es in eine eigene Zeile. So werden Zusatz und Auslassung als Umstellung erkannt (Abstand wie bei „Umstellungen erkennen“)." data-tip="Hat der Aligner ein Wort gegen ein ganz anderes gestellt, während die übrigen Zeugen dasselbe Wort wenige Zeilen weiter haben (z. B. „καὶ … ἔλαβεν“ gegen „ἔλαβε …“), kommt es in eine eigene Zeile. So werden Zusatz und Auslassung als Umstellung erkannt (Abstand wie bei „Umstellungen erkennen“).">i</span></span></label>
+        <label class="check"><input type="checkbox" data-u="detect_transpositions"> <span>Umstellungen erkennen, wenn höchstens <input type="number" data-u="transposition_window" min="0" max="40" class="num small"> Wörter dazwischen liegen<span class="info" tabindex="0" role="img" aria-label="Dieselben Wörter in anderer Reihenfolge in kurzem Abstand werden zu einer Stelle zusammengefasst; die abweichende Lesart erhält type=transposition." data-tip="Dieselben Wörter in anderer Reihenfolge in kurzem Abstand werden zu einer Stelle zusammengefasst; die abweichende Lesart erhält type=transposition.">i</span></span></label>
+        <label class="check"><input type="checkbox" data-u="detect_long_transpositions"> <span>Weite Umstellungen vorschlagen, bis <input type="number" data-u="long_transposition_distance" min="10" max="2000" class="num small"> Wörter Abstand<span class="info" tabindex="0" role="img" aria-label="Fehlt einer Gruppe von Zeugen eine Wortfolge an einer Stelle und hat sie dieselbe Wortfolge an anderer Stelle als Zusatz, wird ein Vorschlag angezeigt (↔?). Übernommen erscheinen beide Stellen im TEI als app mit @prev/@next." data-tip="Fehlt einer Gruppe von Zeugen eine Wortfolge an einer Stelle und hat sie dieselbe Wortfolge an anderer Stelle als Zusatz, wird ein Vorschlag angezeigt (↔?). Übernommen erscheinen beide Stellen im TEI als app mit @prev/@next.">i</span></span></label>
+        <div class="opt-num"><span>Lücke statt Auslassung ab</span> <input type="number" data-u="lacuna_min" min="0" max="2000" class="num small" aria-label="Mindestzahl fehlender Wörter"> <span>fehlenden Wörtern</span>
+          <p class="hint-inline">Fehlt einem Zeugen so viel Text am Stück, gilt er dort als nicht vorhanden (im TEI: <code>lacunaStart</code>/<code>lacunaEnd</code> bzw. <code>witStart</code>/<code>witEnd</code>). 0 schaltet das ab.</p></div>
+      </div>
+    </section>
+  </div>
+
+  <div>
+    <section class="panel" style="position:sticky;top:70px">
+      <h2>Vorschau</h2>
+      <p class="hint">So kommen die Wörter beim Aligner an. <b>Original</b>: wie transkribiert (Nomina sacra aufgelöst). <b>Vergleich</b> (nur bei Zeugen ohne Korrekturen): Form, an der Lesarten als gleich oder verschieden erkannt werden (ohne Interpunktion). <b>Normalisiert</b>: die Form, die der Aligner vergleicht, nach den Regeln unter „Normalisierung“. Fährt man über eine Zeile, zeigt sie auch den orthographischen Schlüssel.</p>
+      <div class="row">
+        <label>Zeuge<select id="pv-wit"></select></label>
+        <label>Abschnitt<select id="pv-seg"><option value="">alle</option></select></label>
+      </div>
+      <div class="preview-wrap" id="pv-out"><p class="muted" style="padding:10px">Noch keine Zeugen.</p></div>
+      <div class="row" style="margin-top:16px">
+        <button class="btn primary" id="run">Kollation starten</button>
+        <span class="muted" id="run-info"></span>
+      </div>
+    </section>
+  </div>
+</main>
+
+<main id="view-syn" hidden></main>
+
+<main id="view-exp" class="export" hidden>
+  <section class="panel">
+    <h2>Stand der Kollation</h2>
+    <p id="exp-stats" class="hint"></p>
+  </section>
+  <div class="formats">
+    <div class="format"><h3>TEI nach PTA-Schema</h3>
+      <p><code>app</code> mit <code>rdg</code> (und <code>lem</code>, wo gewählt), Zeugen im <code>listWit</code> und mit <code>app type="witnesses"</code>, Konjekturen mit <code>@resp</code>/<code>@source</code>, Korrekturen mit <code>varSeq</code>. Gültig gegen <code>tei-pta_collation</code>; das Schema wird beim Speichern danebengelegt.</p>
+      <div class="format-foot">
+        <div class="actions"><a class="btn primary" href="/api/export/tei">Herunterladen</a><button class="btn" data-save="tei" data-tip="Speichert die Datei neben der Projektdatei; der Dateiname wird aus der Editions-URN gebildet.">Neben Projekt ablegen</button></div>
+        <div class="actions"><button class="btn" id="validate">Gegen Schema prüfen</button><button class="btn" id="open-var" data-tip="Öffnet den TEI-Export in der Varianzübersicht (Reiter 4).">In Varianzübersicht</button><span class="info" tabindex="0" role="img" aria-label="Prüft das TEI mit Jing (RelaxNG) und Schematron gegen tei-pta_collation (Lemma nicht erforderlich) und gegen das volle PTA-Schema. Beim Speichern wird der Dateiname aus der Editions-URN gebildet; eine vorhandene Edition wird nie überschrieben." data-tip="Prüft das TEI mit Jing (RelaxNG) und Schematron gegen tei-pta_collation (Lemma nicht erforderlich) und gegen das volle PTA-Schema. Beim Speichern wird der Dateiname aus der Editions-URN gebildet; eine vorhandene Edition wird nie überschrieben.">i</span></div>
+        <p class="schema-info" id="schema-info"></p>
+        <div id="valid-out"></div>
+      </div></div>
+    <div class="format"><h3>Synopse als HTML</h3>
+      <p>Eigenständige Datei mit derselben farbigen Spaltensynopse, Filtern, Legende und Graph; druckbar im Querformat mit allen Zeugen.</p>
+      <div class="format-foot">
+        <div class="actions"><a class="btn primary" href="/api/export/html">Herunterladen</a><button class="btn" data-save="html" data-tip="Speichert die Datei neben der Projektdatei; der Dateiname wird aus der Editions-URN gebildet.">Neben Projekt ablegen</button></div>
+      </div></div>
+    <div class="format"><h3>Tabelle (CSV)</h3>
+      <p>Eine Zeile je Stelle, eine Spalte je Zeuge bzw. Korrekturschicht; öffnet in Excel und LibreOffice.</p>
+      <div class="format-foot">
+        <div class="actions"><a class="btn primary" href="/api/export/csv">Herunterladen</a><button class="btn" data-save="csv" data-tip="Speichert die Datei neben der Projektdatei; der Dateiname wird aus der Editions-URN gebildet.">Neben Projekt ablegen</button></div>
+      </div></div>
+    <div class="format"><h3>Nexus</h3>
+      <p>Merkmalsmatrix für SplitsTree und ähnliche Programme; orthographische Varianten werden mit ihrer Gruppe zusammengefasst.<span class="info" tabindex="0" role="img" aria-label="Ein Merkmal je Variationsstelle, ein Zustand je Lesart; Zeugen ohne Text an der Stelle erhalten ?. Nur der Text nach der Korrektur (ᶜ) wird verwendet." data-tip="Ein Merkmal je Variationsstelle, ein Zustand je Lesart; Zeugen ohne Text an der Stelle erhalten ?. Nur der Text nach der Korrektur (ᶜ) wird verwendet.">i</span></p>
+      <div class="format-foot">
+        <div class="actions"><a class="btn primary" href="/api/export/nexus">Herunterladen</a><button class="btn" data-save="nexus" data-tip="Speichert die Datei neben der Projektdatei; der Dateiname wird aus der Editions-URN gebildet.">Neben Projekt ablegen</button></div>
+      </div></div>
+    <div class="format"><h3>CollateX-JSON</h3>
+      <p>Alignment-Tabelle im CollateX-Format, z. B. für collation-viz.</p>
+      <div class="format-foot">
+        <div class="actions"><a class="btn primary" href="/api/export/json">Herunterladen</a><button class="btn" data-save="json" data-tip="Speichert die Datei neben der Projektdatei; der Dateiname wird aus der Editions-URN gebildet.">Neben Projekt ablegen</button></div>
+      </div></div>
+  </div>
+</main>
+
+<main id="view-var" class="var-view" hidden>
+  <div class="var-bar">
+    <span>Varianzübersicht des aktuellen TEI-Exports<span class="info" tabindex="0" role="img" aria-label="Die Varianzübersicht wertet den Apparat einer TEI-Datei aus: Raster der Abweichungen je Zeuge, Variantengraph, TRAViz, Zeugenkombinationen und Stemma-Vorschlag. Sie zeigt den TEI-Export der aktuellen Kollation und läuft vollständig im Browser." data-tip="Die Varianzübersicht wertet den Apparat einer TEI-Datei aus: Raster der Abweichungen je Zeuge, Variantengraph, TRAViz, Zeugenkombinationen und Stemma-Vorschlag. Sie zeigt den TEI-Export der aktuellen Kollation und läuft vollständig im Browser.">i</span></span>
+    <span class="muted" id="var-info"></span>
+    <span class="spacer"></span>
+    <button class="btn small" id="var-reload">Neu laden</button>
+    <a class="btn small" id="var-window" target="_blank" rel="noopener">In eigenem Fenster</a>
+  </div>
+  <iframe id="var-frame" title="Varianzübersicht"></iframe>
+</main>
+
+<main id="view-about" class="about" hidden>
+  <article class="panel prose" data-only="de" translate="no" lang="de">
+    <h2>Über PTA Collatio+</h2>
+    <p>Kollation von Handschriften-Transkriptionen des <a href="https://pta.bbaw.de" target="_blank" rel="noopener">Patristischen Textarchivs</a> mit farbiger Spaltensynopse, Variantengraph und TEI-Export nach dem <a href="https://github.com/PatristicTextArchive/Schema" target="_blank" rel="noopener">PTA-Schema</a>. Das Werkzeug läuft lokal; alle Einstellungen und Korrekturen stehen in einer Projektdatei, die ins Repository der Edition gehört.</p>
+
+    <h3>Nachweis</h3>
+    <dl class="credits">
+      <dt>Autorin</dt><dd><a href="https://orcid.org/0000-0001-5382-6322" target="_blank" rel="noopener" title="ORCID 0000-0001-5382-6322">Annette von Stockhausen</a></dd>
+      <dt>Projekt</dt><dd><a href="https://pta.bbaw.de" target="_blank" rel="noopener">Patristisches Textarchiv (PTA)</a></dd>
+      <dt>Vorhaben</dt><dd>Akademienvorhaben <a href="https://bibelexegese.bbaw.de" target="_blank" rel="noopener">„Die Alexandrinische und antiochenische Bibelexegese in der Spätantike“</a>, Berlin-Brandenburgische Akademie der Wissenschaften</dd>
+      <dt>Ausgangsbasis</dt><dd>der auf <a href="https://collatex.net" target="_blank" rel="noopener">CollateX</a> zurückgreifende <a href="https://github.com/PatristicTextArchive/collator" target="_blank" rel="noopener">PTA-collator</a>; dessen CollateX-Build mit den TSAligner-Erweiterungen wird weiterverwendet</dd>
+      <dt>Lizenz</dt><dd>MIT-Lizenz für den Code dieses Werkzeugs. Mitgelieferte fremde Bestandteile behalten ihre Lizenzen: CollateX mit den TSAligner-Erweiterungen (GPL-3.0, als eigenes Programm aufgerufen), das PTA-Schema (laut Repository GPL-3.0, laut ODD AGPL-3.0), d3 (ISC) und die Testdaten (CC BY-SA 4.0). Einzelheiten in <code>THIRD_PARTY.md</code>. Programmcode aus anderen Projekten wurde nicht übernommen.</dd>
+      <dt>Version</dt><dd id="about-version">–</dd>
+    </dl>
+
+    <h3>Arbeitsablauf</h3>
+    <ol>
+      <li><b>Vorbereitung</b>: Transkriptionen hinzufügen (Dateien ohne <code>msDesc</code> werden übersprungen), Sigla und Strukturgeber festlegen, Transkriptionen prüfen, Abschnitte, Normalisierung und Aligner einstellen, in der Vorschau kontrollieren, Kollation starten.</li>
+      <li><b>Synopse</b>: Stellen anklicken oder mit <kbd>j</kbd>/<kbd>k</kbd> springen; im Detailfenster Lemma, Typ, Ursache, Verschiebungen, Teilen/Zusammenfassen und Umstellungen bearbeiten. Alle Korrekturen landen im Änderungsprotokoll und werden nach einem neuen Lauf wieder angewendet. Mit <i>Graph</i> wird der Variantengraph zugeschaltet. <i>Drucken</i> gibt alle Stellen der aktuellen Auswahl im Querformat aus. Passen nicht alle Zeugen auf die Seitenbreite, werden sie in Gruppen geteilt, deren Seiten aufeinander folgen.</li>
+      <li><b>Export</b>: TEI (gegen das Kollations- und das volle PTA-Schema prüfbar), HTML-Synopse, CSV, Nexus, CollateX-JSON. Dateinamen nach der Editions-URN ohne <code>urn:cts:</code>; eine vorhandene Edition wird nie überschrieben.</li>
+      <li><b>Varianz</b>: die Varianzübersicht wertet den TEI-Export aus (Raster der Abweichungen je Zeuge, Variantengraph, TRAViz, Zeugenkombinationen, Stemma-Vorschlag). Es ist die Arbeitsfassung: Stellen ohne <code>lem</code> werden an der Lesart mit den meisten Zeugen gemessen.</li>
+    </ol>
+
+    <h3>Konjekturen, Korrekturen und Zeugenbestand</h3>
+    <p>Im Detailfenster einer Stelle trägt man Lesarten des Herausgebers ein, auf Wunsch als Lemma: Konjektur, Korrektur, Vorschlag (mit Sicherheitsgrad) oder vermutete Lücke. Urheber ist man selbst (<code>@resp</code> auf die Bearbeiterin bzw. den Bearbeiter), eine andere Person (<code>@resp</code>, <code>listPerson</code>) oder eine frühere Edition (<code>@source</code>, <code>listBibl</code>). Fehlt einem Zeugen Text, ist das eine Auslassung (<code>rdg type="omission"</code>) oder eine Lücke (<code>app type="witnesses"</code> mit <code>lacunaStart</code>/<code>lacunaEnd</code>, an Anfang und Ende des Zeugen <code>witStart</code>/<code>witEnd</code>). Längere Textverluste gelten automatisch als Lücke; im Detailfenster lässt sich das für jede Stelle umstellen.</p>
+    <p>Hat keine Handschrift an der Stelle Text, etwa bei einer ergänzenden Konjektur oder einer vermuteten Lücke zwischen zwei Wörtern, wählt man unter <i>Position</i> „neue Zeile davor“ oder „danach“. Die Zeile erscheint in der Synopse mit „+“ und im Variantengraphen als gestrichelter Knoten. Im TEI wird daraus ein eigenes <code>app</code> mit der Lesart des Herausgebers und einem leeren <code>rdg</code> der Zeugen.</p>
+    <p>„Titel / Vorspann“ ist der Text vor dem ersten Abschnittsanker (<code>milestone</code> bzw. <code>div</code>), meist Titel oder Überschrift des Werkes. Das Detailfenster nennt die Blätter jeder Handschrift mit Sigle.</p>
+
+    <h3>Synopse und Variantengraph</h3>
+    <p>Die Synopse zeigt einen Zeugen je Spalte (oder je Zeile), Farbe und Symbol stehen für den Variantentyp, gemessen an der Mehrheit, am Lemma oder an einem Leitzeugen. Der Variantengraph darunter stellt jede Variationsstelle als Spalte und jede Lesart als Knoten dar; die Zeugen laufen als Pfade hindurch. Fehlt Zeugen Text, führt ihre Kante gestrichelt unter der Stelle vorbei; weite Umstellungen erscheinen als Bögen. Er zeigt wahlweise das Umfeld der gewählten Stelle oder den ganzen Text bzw. Abschnitt; ein Klick auf einen Knoten wählt die Stelle.</p>
+
+    <h3>Prüfung der Transkriptionen</h3>
+    <ul>
+      <li><b>Getrennte Wörter</b> (fehlendes <code>break="no"</code>): zwei Wörter beiderseits eines einfachen <code>lb</code>/<code>cb</code>/<code>pb</code>, die andere Zeugen als ein Wort haben.</li>
+      <li><b>Zusammengeschriebene Wörter</b> (fehlender Wortzwischenraum, z. B. σωτῆροςἑρμηνεία, ἐπεὶτὰ): das Wort wird samt Nachbarwörtern mit den anderen Handschriften an derselben Stelle verglichen; haben sie dort zwei oder drei Wörter, die zusammen dieses Wort ergeben, wird es gemeldet, sofern mehr Handschriften trennen als ebenso zusammenschreiben und entweder ein Viertel der übrigen Handschriften trennt oder das Wort ein Indiz trägt (zwei Akzente, Spiritus im Wortinneren, Interpunktion).</li>
+      <li><b>Lateinische Buchstaben</b> in griechischen Wörtern; beim Vergleich immer gleichgesetzt.</li>
+    </ul>
+    <p>Getrennte und zusammengeschriebene Wörter können wahlweise bei der Kollation ausgeglichen werden; besser ist die Korrektur in der Transkription.</p>
+
+    <h3>Transkriptionsregeln</h3>
+    <p>Grundlage sind die <a href="https://pta.bbaw.de/de/project/encoding-guidelines#transkription-der-ueberlieferungstraeger" target="_blank" rel="noopener">Transkriptionsregeln des PTA</a>. <code>lb</code>/<code>cb</code>/<code>pb</code>/<code>gb</code> sind Wortgrenzen, mit <code>break="no"</code> nicht; <code>hi rend="initial"</code> und <code>"ekthesis"</code> gehören zum folgenden Wort; <code>g</code> wird als Zeichen am folgenden Wort vermerkt; <code>subst</code>/<code>del</code>/<code>add</code> ergeben die Korrekturschichten * und ᶜ; <code>choice</code> wird aufgelöst (<code>expan</code>, auf Wunsch <code>abbr</code>); <code>unclear</code> und <code>gap</code> gehen markiert ins TEI; <code>note</code>, <code>fw</code>, <code>stamp</code> und <code>figure</code> werden nicht kollationiert.</p>
+
+    <h3>Normalisierung</h3>
+    <p>Jedes Wort erhält eine <b>Vergleichsform</b> (entscheidet, ob Lesarten gleich sind; standardmäßig ohne Interpunktion und Groß-/Kleinschreibung), eine <b>normalisierte Form</b> (was der Aligner vergleicht: ohne Akzente, Spiritus, Iota subscriptum, ν ephelkystikon usw., nach Wahl auch mit gleichgesetztem Itazismus und eigenen Regeln) und einen <b>orthographischen Schlüssel</b> (Itazismus und Doppelkonsonanten gleichgesetzt). Lesarten mit gleichem Schlüssel gelten als orthographische Varianten (<code>cause="orthographic"</code> in einem <code>rdgGrp</code>).</p>
+
+    <h3>Wie der eingebaute Aligner arbeitet</h3>
+    <p>Die Kollation folgt dem Gothenburg-Modell (<a href="https://wiki.tei-c.org/index.php/Textual_Variance" target="_blank" rel="noopener">TEI-Wiki: Textual Variance</a>). Der eingebaute Aligner kombiniert vier Verfahren:</p>
+    <ol>
+      <li><b>Schrittweise Zusammenführung mit Leitbaum</b>: die ähnlichsten Zeugen zuerst, jeder weitere gegen die bisherige Ausrichtung [1].</li>
+      <li><b>Inseln</b>: Folgen von vier Wörtern, die in beiden Texten genau einmal und in gleicher Reihenfolge vorkommen, werden als feste Übereinstimmungen gesetzt, wie im Dekker-Algorithmus von CollateX [2].</li>
+      <li><b>Globale Ausrichtung</b> zwischen den Inseln nach Needleman und Wunsch [3] mit affinen Lückenkosten nach Gotoh [4], damit ausgelassene Wortgruppen zusammenbleiben.</li>
+      <li><b>Unscharfer Wortvergleich</b>: verschiedene Formen ab einer normalisierten Levenshtein-Ähnlichkeit [5] von 0,6 (einstellbar) gelten als dieselbe Stelle.</li>
+    </ol>
+    <p>Weite Umstellungen werden danach im Kollationsmodell erkannt und als Vorschlag angezeigt; im TEI erscheinen sie als zwei <code>app</code> mit <code>@prev</code>/<code>@next</code>. Als unabhängige Zweitmeinung steht CollateX mit dem Dekker-Algorithmus zur Verfügung (Build des <a href="https://gitlab.informatik.uni-halle.de/alignment_public/tsaligner" target="_blank" rel="noopener">TSAligner-Projekts</a>, Java erforderlich).</p>
+    <ol class="refs">
+      <li>Matthew Spencer, Christopher J. Howe: Collating Texts Using Progressive Multiple Alignment. <i>Computers and the Humanities</i> 38 (2004), 253–270. <a href="https://doi.org/10.1007/s10579-004-8682-1" target="_blank" rel="noopener">doi:10.1007/s10579-004-8682-1</a></li>
+      <li>Ronald Haentjens Dekker u. a.: Computer-supported collation of modern manuscripts: CollateX and the Beckett Digital Manuscript Project. <i>Digital Scholarship in the Humanities</i> 30 (2015), 452–470. <a href="https://doi.org/10.1093/llc/fqu007" target="_blank" rel="noopener">doi:10.1093/llc/fqu007</a></li>
+      <li>Saul B. Needleman, Christian D. Wunsch: A general method applicable to the search for similarities in the amino acid sequence of two proteins. <i>Journal of Molecular Biology</i> 48 (1970), 443–453. <a href="https://doi.org/10.1016/0022-2836(70)90057-4" target="_blank" rel="noopener">doi:10.1016/0022-2836(70)90057-4</a></li>
+      <li>Osamu Gotoh: An improved algorithm for matching biological sequences. <i>Journal of Molecular Biology</i> 162 (1982), 705–708. <a href="https://doi.org/10.1016/0022-2836(82)90398-9" target="_blank" rel="noopener">doi:10.1016/0022-2836(82)90398-9</a></li>
+      <li>Vladimir I. Levenshtein: Binary codes capable of correcting deletions, insertions, and reversals. <i>Soviet Physics Doklady</i> 10 (1966), 707–710.</li>
+    </ol>
+
+    <h3>TEI und Schema</h3>
+    <p>Der Export folgt dem PTA-Schema (parallel segmentation, <code>listWit</code>, <code>pb edRef</code> aller Zeugen, <code>witStart</code>/<code>witEnd</code>, <code>lacunaStart</code>/<code>lacunaEnd</code>, Korrekturen in den Handschriften als eigene <code>rdg</code> mit <code>varSeq</code> 1 und 2, zusammen mit gleichlautenden Lesarten in einem <code>rdgGrp</code>; die Lesart nach der Korrektur behält das Markup der Transkription, also <code>subst</code>, <code>add</code> mit <code>@place</code>, <code>del</code> mit <code>@rend</code> und <code>@hand</code>). Solange nicht alle Lemmata gewählt sind, enthält ein <code>app</code> nur <code>rdg</code>; dafür gibt es die abgeleitete Schema-Variante <code>tei-pta_collation</code>, in der „Variation needs a lem“ nur eine Warnung ist.</p>
+    <p>Das PTA-Schema wird beim Start und vor jeder Prüfung (höchstens stündlich) mit der Fassung auf GitHub verglichen. Eine neue Fassung wird nach einer Kontrolle übernommen, das Kollationsschema daraus abgeleitet. Ist GitHub nicht erreichbar, gilt die bisherige Fassung. Der Stand steht im Reiter <i>Export</i>; abschalten mit <code>--no-schema-update</code>.</p>
+
+    <p class="muted">Ausführliche Beschreibung, Benchmark und Hinweise zur Entwicklung im README des Repositoriums.</p>
+  </article>
+  <article class="panel prose" data-only="en" translate="no" lang="en">
+    <h2>About PTA Collatio+</h2>
+    <p>Collation of manuscript transcriptions of the <a href="https://pta.bbaw.de" target="_blank" rel="noopener">Patristic Text Archive</a> with a colour-coded column synopsis, a variant graph and TEI export following the <a href="https://github.com/PatristicTextArchive/Schema" target="_blank" rel="noopener">PTA schema</a>. The tool runs locally; all settings and corrections are kept in a project file that belongs in the repository of the edition.</p>
+
+    <h3>Credits</h3>
+    <dl class="credits">
+      <dt>Author</dt><dd><a href="https://orcid.org/0000-0001-5382-6322" target="_blank" rel="noopener" title="ORCID 0000-0001-5382-6322">Annette von Stockhausen</a></dd>
+      <dt>Project</dt><dd><a href="https://pta.bbaw.de" target="_blank" rel="noopener">Patristic Text Archive (PTA)</a></dd>
+      <dt>Research project</dt><dd>Academy project <a href="https://bibelexegese.bbaw.de" target="_blank" rel="noopener">„Die Alexandrinische und antiochenische Bibelexegese in der Spätantike“</a> (Alexandrian and Antiochene Biblical Exegesis in Late Antiquity), Berlin-Brandenburg Academy of Sciences and Humanities</dd>
+      <dt>Based on</dt><dd>the <a href="https://github.com/PatristicTextArchive/collator" target="_blank" rel="noopener">PTA collator</a>, which relies on <a href="https://collatex.net" target="_blank" rel="noopener">CollateX</a>; its CollateX build with the TSAligner extensions is still used</dd>
+      <dt>Licence</dt><dd>MIT licence for the code of this tool. Bundled third-party parts keep their licences: CollateX with the TSAligner extensions (GPL-3.0, run as a separate program), the PTA schema (GPL-3.0 according to the repository, AGPL-3.0 according to the ODD), d3 (ISC) and the test data (CC BY-SA 4.0). Details in <code>THIRD_PARTY.md</code>. No program code was taken over from other projects.</dd>
+      <dt>Version</dt><dd data-version>–</dd>
+    </dl>
+
+    <h3>Workflow</h3>
+    <ol>
+      <li><b>Preparation</b>: add transcriptions (files without <code>msDesc</code> are skipped), set sigla and the structure witness, check the transcriptions, set up sections, normalisation and aligner, inspect the preview, start the collation.</li>
+      <li><b>Synopsis</b>: click a place or jump with <kbd>j</kbd>/<kbd>k</kbd>; in the detail panel edit lemma, type, cause, moves, split/merge and transpositions. All corrections go into the change log and are applied again after a new run. <i>Graph</i> adds the variant graph. <i>Print</i> outputs all places of the current selection in landscape; if not all witnesses fit the page width, they are split into groups printed on consecutive pages.</li>
+      <li><b>Export</b>: TEI (can be validated against the collation schema and the full PTA schema), HTML synopsis, CSV, Nexus, CollateX JSON. File names follow the edition URN without <code>urn:cts:</code>; an existing edition is never overwritten.</li>
+      <li><b>Variance</b>: the variance overview analyses the TEI export (grid of deviations per witness, variant graph, TRAViz, witness combinations, stemma suggestion). It is the working version: places without <code>lem</code> are measured against the reading with the most witnesses.</li>
+    </ol>
+
+    <h3>Conjectures, corrections and extant witnesses</h3>
+    <p>In the detail panel of a place you can add readings of the editor, optionally as lemma: conjecture, correction, proposition (with degree of certainty) or suspected lacuna. The author is yourself (<code>@resp</code> pointing to the editor), another person (<code>@resp</code>, <code>listPerson</code>) or an earlier edition (<code>@source</code>, <code>listBibl</code>). If a witness has no text, this is either an omission (<code>rdg type="omission"</code>) or a lacuna (<code>app type="witnesses"</code> with <code>lacunaStart</code>/<code>lacunaEnd</code>, at the beginning and end of the witness <code>witStart</code>/<code>witEnd</code>). Longer losses of text count as lacunae automatically; this can be changed for every place in the detail panel.</p>
+    <p>Where no manuscript has text, for example for a supplementing conjecture or a suspected lacuna between two words, choose “new row before” or “after” under <i>Position</i>. The row appears in the synopsis with “+” and in the variant graph as a dashed node. In the TEI it becomes an <code>app</code> of its own with the reading of the editor and an empty <code>rdg</code> of the witnesses.</p>
+    <p>“Title / preamble” is the text before the first section anchor (<code>milestone</code> or <code>div</code>), usually the title or heading of the work. The detail panel lists the folios of each manuscript with its siglum.</p>
+
+    <h3>Synopsis and variant graph</h3>
+    <p>The synopsis shows one witness per column (or per row); colour and symbol indicate the type of variant, measured against the majority, the lemma or a lead witness. The variant graph below shows every variation unit as a column and every reading as a node; the witnesses run through it as paths. Where witnesses have no text, their edge passes below the place as a dashed line; long transpositions appear as arcs. It shows either the context of the selected place or the whole text or section; clicking a node selects the place.</p>
+
+    <h3>Checking the transcriptions</h3>
+    <ul>
+      <li><b>Split words</b> (missing <code>break="no"</code>): two words on either side of a plain <code>lb</code>/<code>cb</code>/<code>pb</code> that other witnesses have as one word.</li>
+      <li><b>Words written together</b> (missing space, e.g. σωτῆροςἑρμηνεία, ἐπεὶτὰ): the word and its neighbours are compared with the other manuscripts at the same place; if they have two or three words there that together make up this word, it is reported, provided more manuscripts separate than write it the same way and either a quarter of the other manuscripts separate or the word itself shows a sign (two accents, a breathing inside the word, punctuation).</li>
+      <li><b>Latin letters</b> in Greek words; always treated as equal when comparing.</li>
+    </ul>
+    <p>Split words and words written together can optionally be evened out during collation; correcting the transcription is better.</p>
+
+    <h3>Transcription rules</h3>
+    <p>The basis are the <a href="https://pta.bbaw.de/de/project/encoding-guidelines#transkription-der-ueberlieferungstraeger" target="_blank" rel="noopener">transcription rules of the PTA</a>. <code>lb</code>/<code>cb</code>/<code>pb</code>/<code>gb</code> are word boundaries, but not with <code>break="no"</code>; <code>hi rend="initial"</code> and <code>"ekthesis"</code> belong to the following word; <code>g</code> is noted as a sign on the following word; <code>subst</code>/<code>del</code>/<code>add</code> give the correction layers * and ᶜ; <code>choice</code> is resolved (<code>expan</code>, optionally <code>abbr</code>); <code>unclear</code> and <code>gap</code> are marked in the TEI; <code>note</code>, <code>fw</code>, <code>stamp</code> and <code>figure</code> are not collated.</p>
+
+    <h3>Normalisation</h3>
+    <p>Every word gets a <b>comparison form</b> (decides whether readings are equal; by default without punctuation and case), a <b>normalised form</b> (what the aligner compares: without accents, breathings, iota subscript, ν ephelkystikon etc., optionally also with itacism made equal and with custom rules) and an <b>orthographic key</b> (itacism and double consonants made equal). Readings with the same key count as orthographic variants (<code>cause="orthographic"</code> in an <code>rdgGrp</code>).</p>
+
+    <h3>How the built-in aligner works</h3>
+    <p>The collation follows the Gothenburg model (<a href="https://wiki.tei-c.org/index.php/Textual_Variance" target="_blank" rel="noopener">TEI wiki: Textual Variance</a>). The built-in aligner combines four methods:</p>
+    <ol>
+      <li><b>Progressive alignment with a guide tree</b>: the most similar witnesses first, each further one against the alignment so far [1].</li>
+      <li><b>Islands</b>: sequences of four words that occur exactly once in both texts and in the same order are fixed as matches, as in the Dekker algorithm of CollateX [2].</li>
+      <li><b>Global alignment</b> between the islands after Needleman and Wunsch [3] with affine gap costs after Gotoh [4], so that omitted groups of words stay together.</li>
+      <li><b>Fuzzy word comparison</b>: different forms with a normalised Levenshtein similarity [5] of at least 0.6 (adjustable) count as the same place.</li>
+    </ol>
+    <p>Long transpositions are then detected in the collation model and shown as suggestions; in the TEI they appear as two <code>app</code> linked with <code>@prev</code>/<code>@next</code>. As an independent second opinion, CollateX with the Dekker algorithm is available (build of the <a href="https://gitlab.informatik.uni-halle.de/alignment_public/tsaligner" target="_blank" rel="noopener">TSAligner project</a>, requires Java).</p>
+    <ol class="refs">
+      <li>Matthew Spencer, Christopher J. Howe: Collating Texts Using Progressive Multiple Alignment. <i>Computers and the Humanities</i> 38 (2004), 253–270. <a href="https://doi.org/10.1007/s10579-004-8682-1" target="_blank" rel="noopener">doi:10.1007/s10579-004-8682-1</a></li>
+      <li>Ronald Haentjens Dekker et al.: Computer-supported collation of modern manuscripts: CollateX and the Beckett Digital Manuscript Project. <i>Digital Scholarship in the Humanities</i> 30 (2015), 452–470. <a href="https://doi.org/10.1093/llc/fqu007" target="_blank" rel="noopener">doi:10.1093/llc/fqu007</a></li>
+      <li>Saul B. Needleman, Christian D. Wunsch: A general method applicable to the search for similarities in the amino acid sequence of two proteins. <i>Journal of Molecular Biology</i> 48 (1970), 443–453. <a href="https://doi.org/10.1016/0022-2836(70)90057-4" target="_blank" rel="noopener">doi:10.1016/0022-2836(70)90057-4</a></li>
+      <li>Osamu Gotoh: An improved algorithm for matching biological sequences. <i>Journal of Molecular Biology</i> 162 (1982), 705–708. <a href="https://doi.org/10.1016/0022-2836(82)90398-9" target="_blank" rel="noopener">doi:10.1016/0022-2836(82)90398-9</a></li>
+      <li>Vladimir I. Levenshtein: Binary codes capable of correcting deletions, insertions, and reversals. <i>Soviet Physics Doklady</i> 10 (1966), 707–710.</li>
+    </ol>
+
+    <h3>TEI and schema</h3>
+    <p>The export follows the PTA schema (parallel segmentation, <code>listWit</code>, <code>pb edRef</code> of all witnesses, <code>witStart</code>/<code>witEnd</code>, <code>lacunaStart</code>/<code>lacunaEnd</code>, corrections in the manuscripts as separate <code>rdg</code> with <code>varSeq</code> 1 and 2, grouped with readings of the same wording in an <code>rdgGrp</code>; the reading after the correction keeps the markup of the transcription: <code>subst</code>, <code>add</code> with <code>@place</code>, <code>del</code> with <code>@rend</code>, and <code>@hand</code>). As long as not all lemmata are chosen, an <code>app</code> contains only <code>rdg</code>; for this there is the derived schema variant <code>tei-pta_collation</code>, in which “Variation needs a lem” is only a warning.</p>
+    <p>The PTA schema is compared with the version on GitHub at start and before each validation (at most once an hour). A newer version is taken over after a check, and the collation schema is derived from it. If GitHub cannot be reached, the previous version stays in use. The current state is shown in the <i>Export</i> tab; switch off with <code>--no-schema-update</code>.</p>
+
+    <p class="muted">Full description, benchmark and notes on development in the README of the repository (in German).</p>
+  </article>
+</main>
+
+<footer class="site-foot">
+  <span>PTA Collatio+ <span class="ver" data-version>0.1.0</span></span>
+  <a href="https://orcid.org/0000-0001-5382-6322" target="_blank" rel="noopener" title="ORCID 0000-0001-5382-6322">Annette von Stockhausen</a>
+  <a href="https://pta.bbaw.de" target="_blank" rel="noopener">Patristisches Textarchiv</a>
+  <a href="https://bibelexegese.bbaw.de" target="_blank" rel="noopener">AV „Die Alexandrinische und antiochenische Bibelexegese in der Spätantike“</a>
+  <a href="#about" data-view-link="about">Über</a>
+</footer>
+
+<script src="/static/i18n-en.js"></script>
+<script src="/static/i18n.js"></script>
+<script src="/static/graph.js"></script>
+<script src="/static/synopsis.js"></script>
+<script src="/static/app.js"></script>
+</body>
+</html>
