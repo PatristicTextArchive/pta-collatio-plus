@@ -21,6 +21,7 @@ source file that no longer fits fails loudly instead of being half patched. Chan
     in the apparatus entry opens the unit in the synopsis of the application
  7. footer reduced to the explanation of the evaluation
  8. one untranslated note translated
+ 9. Salemans stemma: the places of each variation formula, with links to the entry and the synopsis
 """
 import pathlib
 import re
@@ -128,6 +129,28 @@ def main(src):
         en = "Counted are variation units of the selected types that deviate from the reference (${esc(refLabel())}); “per 100 w.” refers to the extant text of the witness${S.ref === 'leit' ? ', as far as the lead witness has text as well' : ''}."
         s = rep(s, '<p class="note">' + de + "</p>",
                 "<p class=\"note\">${LANG === 'en'\n          ? `" + en + "`\n          : `" + de + "`}</p>")
+
+    # 9. Salemans: each variation formula lists its places (instances); a place opens its apparatus
+    #    entry, and "show in graph" opens it in the synopsis of the application (see 6)
+    s = rep(s, "  function salemansPanel(C) {\n",
+            "  // PTA Collatio+: places of a variation formula, each with its entry and a link into the synopsis\n"
+            "  const appKeyOf = (u) => { const a = u.dom && u.dom.app && u.dom.app.closest ? u.dom.app.closest('app[n]') : null; return a && window.parent !== window ? a.getAttribute('n') : null; };\n"
+            "  const formulaPlaces = (f) => `<details class=\"cf-places\"><summary>${L('Belege')}</summary><ul>` + f.items.map((u, i) => {\n"
+            "    const sec = secOf(u.section), k = appKeyOf(u), tx = f.texts[i] || [];\n"
+            "    return `<li><button type=\"button\" class=\"link\" data-go=\"${u.id}\">${esc(sec ? sec.label : '')} · ${L('Wort')} ${u.pos + 1}</button> <span class=\"grc\">${esc(tx[0] || 'om.')}</span> | <span class=\"grc\">${esc(tx[1] || 'om.')}</span>`\n"
+            "      + (k ? ` · <button type=\"button\" class=\"link\" data-appkey=\"${esc(k)}\">${L('im Graph zeigen')}</button>` : '') + '</li>';\n"
+            "  }).join('') + '</ul></details>';\n"
+            "  function salemansPanel(C) {\n")
+    s = rep(s, "C.acc.slice(0, 40).map((f) => `<li>${cb(f, true)}${fmt(f)}</label> · ${f.items.length}<br><span class=\"tag\">${ex(f)}</span></li>`)",
+            "C.acc.slice(0, 40).map((f) => `<li>${cb(f, true)}${fmt(f)}</label> · ${f.items.length}<br><span class=\"tag\">${ex(f)}</span>${formulaPlaces(f)}</li>`)")
+    s = rep(s, "<span class=\"tag\">${L('gegen')} ${fmt(r.clash)}</span><br><span class=\"tag\">${ex(r.f)}</span></li>`)",
+            "<span class=\"tag\">${L('gegen')} ${fmt(r.clash)}</span><br><span class=\"tag\">${ex(r.f)}</span>${formulaPlaces(r.f)}</li>`)")
+    s = rep(s, "off.map((r) => `<li>${cb(r.f, false)}${fmt(r.f)}</label> · ${r.f.items.length}</li>`)",
+            "off.map((r) => `<li>${cb(r.f, false)}${fmt(r.f)}</label> · ${r.f.items.length}${formulaPlaces(r.f)}</li>`)")
+    s = rep(s, "'Unverträgliche Formeln': 'Incompatible formulas',", "'Unverträgliche Formeln': 'Incompatible formulas', 'Belege': 'Instances',")
+    first = s.index("</style>")
+    s = s[:first] + "details.cf-places { margin: 2px 0 4px; font-size: var(--fs-xs); } details.cf-places summary { cursor: pointer; color: var(--muted); }\n" \
+        "details.cf-places ul { margin: 2px 0; padding-left: 14px; } details.cf-places li { margin: 1px 0; }\n" + s[first:]
 
     # checks
     for bad in ("data-lang=", "type=\"file\"", "id: 'sankey'", "id: 'synopse'", "id: 'graph'", "id: 'traviz'", "data-show=\"", "Ein Werkzeug zum", "A tool for the"):

@@ -647,3 +647,58 @@ def test_sub_variant_with_many_missing_words_is_flagged():
     assert c["parent"] == "r0" and c["sub_diff"]["missing"] == 4 and c.get("sub_warn")
     assert readings[3]["parent"] == "r0" and not readings[3].get("sub_warn")
     assert not readings[4].get("parent")                      # omission of the whole unit: own reading
+
+
+def test_check_reports_lines_in_file(run):
+    p, _ = run
+    res = collation.check(p)
+    fu = [f for f in res["fused"] if f["word"] == "διατοῦτο" and f["wit"] == "La"]
+    assert fu and fu[0]["lines"]
+    line = open(fu[0]["file"], encoding="utf-8").read().split("\n")[fu[0]["lines"][0] - 1]
+    assert "διατοῦτο" in line
+
+
+def test_source_lines_across_tags(tmp_path):
+    f = tmp_path / "t.xml"
+    f.write_text('<TEI>\n<pb n="1r"/>\nκαὶ ἄλ<lb break="no"/>\nλος\n<pb n="1v"/>\nKαὶ\n</TEI>\n', encoding="utf-8")
+    assert collation.source_lines(str(f), "1r", "ἄλλος") == [3]
+    assert collation.source_lines(str(f), "1v", "Kαὶ") == [6]
+    assert collation.source_lines(str(f), "1v", "nicht da") == []
+
+
+def test_witness_date_from_history_origin(tmp_path, run):
+    src = os.path.join(DATA, "pta0013.pta003.pta-MsLa.xml")
+    txt = open(src, encoding="utf-8").read()
+    dated = txt.replace("</msIdentifier>", '</msIdentifier><history><origin><origDate notAfter="1300" notBefore="1200">13th cent.</origDate></origin></history>', 1)
+    f = tmp_path / "pta0013.pta003.pta-MsLa.xml"
+    f.write_text(dated, encoding="utf-8")
+    info = extract.read_info(str(f))
+    assert info.orig_date == "13th cent." and info.orig_date_attrs == {"notBefore": "1200", "notAfter": "1300"}
+    other = tmp_path / "other.xml"
+    other.write_text(txt.replace("</msIdentifier>", '</msIdentifier><history><origin><origDate xml:id="d1" when-iso="1263-05" '
+                                 'calendar="#julian" datingMethod="#julian">1263</origDate></origin></history>', 1), encoding="utf-8")
+    assert extract.read_info(str(other)).orig_date_attrs == {"when-iso": "1263-05", "calendar": "#julian", "datingMethod": "#julian"}
+    assert extract.read_info(src).orig_date is None                # nothing there: stays empty
+    p, res = run
+    p = copy.deepcopy(p)
+    for w in p["witnesses"]:
+        if w["id"] == "La":
+            w["file"] = str(f)
+    res = collation.run(p)
+    xml = export_tei.export_tei(build(res, p), p)
+    root = etree.fromstring(xml)
+    od = root.find(".//t:listWit/t:witness[@xml:id='La']/t:origDate", {**TEI, "xml": "http://www.w3.org/XML/1998/namespace"})
+    assert od is not None and od.text == "13th cent." and od.get("notBefore") == "1200" and od.get("notAfter") == "1300"
+
+
+def test_refsdecl_cllg_is_last(run):
+    p, res = run
+    root = etree.fromstring(export_tei.export_tei(build(res, p), p))
+    enc = root.find(".//t:encodingDesc", TEI)
+    names = [(etree.QName(c).localname, c.get("{http://www.w3.org/XML/1998/namespace}id")) for c in enc]
+    refs = [i for n, i in names if n == "refsDecl"]
+    assert refs[-1] == "cllg" and names.index(("refsDecl", "cllg")) + 1 == names.index(("editorialDecl", None))
+    cp = enc.find("t:refsDecl[@xml:id='cllg']/t:cRefPattern", {**TEI, "xml": "http://www.w3.org/XML/1998/namespace"})
+    assert cp.get("matchPattern") == r"urn:cts:greekLit:(tlg[0-9]{4})\.(tlg[0-9]{3})\.(.+)"
+    assert cp.get("replacementPattern") == "https://gitlab.inria.fr/almanach/cllg/freed-corpus/-/blob/main/data/$1/$2/$1.$2.$3"
+    assert cp.findtext("t:p", namespaces=TEI) == "References to CLLG-CTS-URNs"

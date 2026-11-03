@@ -110,6 +110,7 @@ class WitnessInfo:
     orig_date: str | None
     segments: dict               # mode -> list of keys found
     lang: str | None
+    orig_date_attrs: dict = field(default_factory=dict)   # attributes of origDate (dating), as in the file
 
     def to_dict(self) -> dict:
         return self.__dict__.copy()
@@ -151,7 +152,13 @@ def read_info(path: str) -> WitnessInfo:
     name = ", ".join(parts) or wid
     work_el = root.find(".//tei:publicationStmt/tei:idno[@type='PTA']", NS)
     title_el = root.find(".//tei:titleStmt/tei:title", NS)
-    orig = root.find(".//tei:msDesc//tei:origDate", NS)
+    # date of the manuscript: msDesc/history/origin/origDate (otherwise left empty)
+    orig = root.find(".//tei:sourceDesc/tei:msDesc/tei:history/tei:origin/tei:origDate", NS)
+    # all attributes are kept as they are (machine-readable dating: @when, @notBefore/@notAfter,
+    # @from/@to, their -iso/-custom forms, @calendar, @datingMethod …), only an @xml:id is dropped
+    date_attrs = {}
+    if orig is not None:
+        date_attrs = {k: v for k, v in orig.attrib.items() if k != XML_ID}
     body = root.find(".//tei:text/tei:body", NS)
     pages = [pb.get("n") for pb in body.iter(f"{{{TEI}}}pb")] if body is not None else []
     has_corr = body is not None and any(True for _ in body.iter(f"{{{TEI}}}del", f"{{{TEI}}}add", f"{{{TEI}}}subst"))
@@ -164,6 +171,7 @@ def read_info(path: str) -> WitnessInfo:
         has_corrections=bool(has_corr),
         first_page=pages[0] if pages else None, last_page=pages[-1] if pages else None,
         orig_date=_text(orig) or None,
+        orig_date_attrs=date_attrs,
         segments=available_segments(tree),
         lang=lang,
     )

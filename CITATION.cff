@@ -1,8 +1,8 @@
 cff-version: 1.2.0
 message: "Wenn Sie diese Software verwenden, zitieren Sie sie bitte so. / If you use this software, please cite it as below."
 title: "PTA Collatio+"
-version: 0.1.0
-date-released: 2026-11-02
+version: 0.1.1
+date-released: 2026-11-03
 license: MIT
 authors:
   - family-names: "von Stockhausen"

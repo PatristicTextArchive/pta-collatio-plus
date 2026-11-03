@@ -241,6 +241,8 @@
       ? `${br.length} getrennte, ${fu.length} zusammengeschriebene Wörter, ${mx.length} mit lateinischen Buchstaben`
       : "Keine Auffälligkeiten gefunden.";
     const file = f => `<td class="f" title="${esc(f)}">${esc((f || "").split(/[\\/]/).pop())}</td>`;
+    // line(s) in the XML file; empty if the word could not be found there as written (e.g. expanded nomina sacra)
+    const lines = x => `<td class="f">${esc((x.lines || []).join(", "))}</td>`;
     const section = (title, help, head, rows) => rows.length ? `<h4 class="check-h">${title}${tip(help)}</h4>
       <div class="preview-wrap" style="max-height:240px"><table class="preview"><thead><tr>${head.map(h => `<th>${h}</th>`).join("")}</tr></thead><tbody>${rows.join("")}</tbody></table></div>` : "";
     $("#check-out").innerHTML =
@@ -249,16 +251,16 @@
         ["Zeuge", "Zeile", "Getrennt", "Vorschlag", "Datei"],
         br.map(b => `<tr><td class="f">${esc(b.wit)}</td><td class="f">${b.line}</td><td>${esc(b.a)} | ${esc(b.b)}</td><td>${esc(b.joined)}</td>${file(b.file)}</tr>`)) +
       section("Zusammengeschriebene Wörter (fehlender Wortzwischenraum)",
-        "Das Wort wird mit seinen Nachbarwörtern an derselben Stelle mit den anderen Handschriften verglichen: Haben sie dort zwei (oder drei) Wörter, die zusammen dieses Wort ergeben (σωτῆροςἑρμηνεία → σωτῆρος ἑρμηνεία), wird es gemeldet, sofern mehr Handschriften trennen als ebenso zusammenschreiben und entweder mindestens ein Viertel der übrigen Handschriften trennt oder das Wort selbst ein Indiz trägt (zwei Akzente, Spiritus im Wortinneren, Interpunktion zwischen Buchstaben). Jeder Teil wird für sich normalisiert, ein ν ephelkystikon oder ein Tippfehler im entfernteren Teil stört also nicht. Ohne Indiz sind es oft zusammengeschriebene Proklitika (διατοῦτο, ἐξαυτοῦ), die man auch so belassen kann.",
-        ["Zeuge", "Seite", "Wort", "Vorschlag", "Umfeld", "Hss.", "Indiz", "Datei"],
-        fu.map(f => `<tr><td class="f">${esc(f.wit)}</td><td class="f">${esc(f.page || "")}</td><td>${esc(f.word)}</td><td>${esc(f.split)}</td>
+        "Das Wort wird mit seinen Nachbarwörtern an derselben Stelle mit den anderen Handschriften verglichen: Haben sie dort zwei (oder drei) Wörter, die zusammen dieses Wort ergeben (σωτῆροςἑρμηνεία → σωτῆρος ἑρμηνεία), wird es gemeldet, sofern mehr Handschriften trennen als ebenso zusammenschreiben und entweder mindestens ein Viertel der übrigen Handschriften trennt oder das Wort selbst ein Indiz trägt (zwei Akzente, Spiritus im Wortinneren, Interpunktion zwischen Buchstaben). Jeder Teil wird für sich normalisiert, ein ν ephelkystikon oder ein Tippfehler im entfernteren Teil stört also nicht. Ohne Indiz sind es oft zusammengeschriebene Proklitika (διατοῦτο, ἐξαυτοῦ), die man auch so belassen kann. Zeile = Zeile in der XML-Datei (bei mehreren gleichen Wörtern auf der Seite alle).",
+        ["Zeuge", "Seite", "Zeile", "Wort", "Vorschlag", "Umfeld", "Hss.", "Indiz", "Datei"],
+        fu.map(f => `<tr><td class="f">${esc(f.wit)}</td><td class="f">${esc(f.page || "")}</td>${lines(f)}<td>${esc(f.word)}</td><td>${esc(f.split)}</td>
           <td class="ctx">${esc(f.context || "")}</td>
           <td class="f" data-tip="${esc(f.support && f.support.length ? "Trennen hier: " + f.support.join(", ") + (f.same && f.same.length ? " · ebenso zusammengeschrieben: " + f.same.join(", ") : "") : "Anzahl der Handschriften mit dieser Wortfolge im ganzen Text")}">${f.count}${f.same && f.same.length ? ` <span class="muted">/ ${f.same.length}</span>` : ""}</td>
           <td class="f">${esc((f.evidence || []).join(", "))}</td>${file(f.file)}</tr>`)) +
       section("Lateinische Buchstaben in griechischen Wörtern",
-        "Lateinische Zeichen, die wie griechische aussehen (K statt Κ, o statt ο). Für das Ausrichten werden sie schon gleichgesetzt; in der Transkription sollten sie korrigiert werden.",
-        ["Zeuge", "Seite", "Wort", "lateinisch"],
-        mx.map(m => `<tr><td class="f">${esc(m.wit)}</td><td class="f">${esc(m.page || "")}</td><td>${esc(m.word)}</td><td class="f">${esc(m.latin)}</td></tr>`));
+        "Lateinische Zeichen, die wie griechische aussehen (K statt Κ, o statt ο). Für das Ausrichten werden sie schon gleichgesetzt; in der Transkription sollten sie korrigiert werden. Zeile = Zeile in der XML-Datei.",
+        ["Zeuge", "Seite", "Zeile", "Wort", "lateinisch", "Datei"],
+        mx.map(m => `<tr><td class="f">${esc(m.wit)}</td><td class="f">${esc(m.page || "")}</td>${lines(m)}<td>${esc(m.word)}</td><td class="f">${esc(m.latin)}</td>${file(m.file)}</tr>`));
   };
   $("#split-fused").onchange = e => { st.project.split_fused_words = e.target.checked; queuePut("split_fused_words"); };
   $("#join-breaks").onchange = e => { st.project.join_suspicious_breaks = e.target.checked; queuePut("join_suspicious_breaks"); };

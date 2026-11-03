@@ -142,7 +142,7 @@ def export_synopsis_html(model: Model, proj: dict, lang: str = "de") -> bytes:
   <span>PTA Collatio+ {__version__}</span>
   <a href="https://orcid.org/0000-0001-5382-6322" title="ORCID 0000-0001-5382-6322">Annette von Stockhausen</a>
   <a href="https://pta.bbaw.de">Patristisches Textarchiv</a>
-  <a href="https://bibelexegese.bbaw.de">AV „Die Alexandrinische und antiochenische Bibelexegese in der Spätantike“</a>
+  <a href="https://bibelexegese.bbaw.de">AV „Die alexandrinische und antiochenische Bibelexegese in der Spätantike“</a>
 </footer>
 <script>window.PTA_DATA = {payload};</script>
 <script>{js}</script>

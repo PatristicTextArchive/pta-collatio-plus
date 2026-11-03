@@ -303,6 +303,7 @@ ul.conf { margin: 4px 0 8px; padding-left: 18px; font-size: var(--fs-s); } ul.co
 .acpc-lines { font-size: var(--fs-s); color: var(--muted); margin-top: 2px; }
 .inner-sum { font-size: var(--fs-s); color: var(--muted); margin-top: 2px; } .inner-sum .mono { font-size: var(--fs-xs); }
 #chart text.esup { font-size: 9.5px; fill: var(--muted); }
+#chart text.slab-g, #chart text.slab-n, #chart text.esup, #chart text.slab-w { paint-order: stroke; stroke: var(--surface); stroke-width: 4px; stroke-linejoin: round; }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
 
 /* PTA Collatio+: colours and fonts of the application (variant colours as in the synopsis:
@@ -328,6 +329,8 @@ ul.conf { margin: 4px 0 8px; padding-left: 18px; font-size: var(--fs-s); } ul.co
   --c-subst: #ef7d33; --c-add: #2fbf95; --c-transp: #dc94bf; --c-om: #8a95a3; --hatch: #5b6676; }
 .wrap { padding-block: 14px 24px; }
 header.work { border-bottom: 0; padding-bottom: 0; }
+details.cf-places { margin: 2px 0 4px; font-size: var(--fs-xs); } details.cf-places summary { cursor: pointer; color: var(--muted); }
+details.cf-places ul { margin: 2px 0; padding-left: 14px; } details.cf-places li { margin: 1px 0; }
 </style>
 
 </head>
@@ -1057,7 +1060,7 @@ header.work { border-bottom: 0; padding-bottom: 0; }
     'Grundlage sind Typ-2-Variationen: Stellen, an denen sich genau zwei Varianten gegenüberstehen, jede von mindestens zwei Zeugen bezeugt. Orthographica bleiben unberücksichtigt. Verträgliche Variationsformeln ergeben einen ungerichteten Baum; die Richtung (Lage des Archetyps) bestimmt die philologische Beurteilung.': 'The basis are type-2 variations: places where exactly two variants stand against each other, each attested by at least two witnesses. Orthographic variants are not considered. Compatible variation formulas yield an unrooted tree; its direction (position of the archetype) is a matter of philological judgement.',
     '{a} Stellen: {b} Typ-2, {c} nur Einzelabweichungen (Typ 1), {d} mit mehr als zwei Varianten, {e} ohne Varianz': '{a} places: {b} type-2, {c} singular deviations only (type 1), {d} with more than two variants, {e} without variance',
     '{n} mit Umstellung ausgenommen': '{n} with transposition left out', '{n} Variationsformeln angenommen': '{n} variation formulas accepted', 'mind. {m} Belege': 'at least {m} instances',
-    'Unverträgliche Formeln': 'Incompatible formulas', 'Hinweis auf Kontamination oder Parallelentwicklung': 'hint at contamination or parallel development', '{n} weitere Formeln mit zu wenigen Belegen': '{n} further formulas with too few instances',
+    'Unverträgliche Formeln': 'Incompatible formulas', 'Belege': 'Instances', 'Hinweis auf Kontamination oder Parallelentwicklung': 'hint at contamination or parallel development', '{n} weitere Formeln mit zu wenigen Belegen': '{n} further formulas with too few instances',
     'Ausgerichtet: Wurzel wie gewählt.': 'Rooted as chosen.', 'Ungerichtet: Die Darstellung beginnt beim mittleren Knoten; das ist keine Aussage über den Archetyp. Unter „Wurzel“ lässt sich der Baum ausrichten.': 'Unrooted: the drawing starts at the central node; this says nothing about the archetype. Use “Root” to orient the tree.',
     'Ungerichteter Baum aus Typ-2-Variationen; Zahl an der Kante: Variationen, die diese Teilung stützen. Knoten sind hypothetische Zwischenstufen.': 'Unrooted tree from type-2 variations; number at an edge: variations supporting this split. Nodes are hypothetical intermediaries.',
     '{n} Typ-2-Variationen stützen die Kante': '{n} type-2 variations support this edge',
@@ -2768,6 +2771,13 @@ header.work { border-bottom: 0; padding-bottom: 0; }
     const nodeList = [...adj.values()].map((e) => e.n);
     return { root, R0: { wits, excluded, sing: new Map(), support: new Map() }, stat, acc, rej, unplaced, forms: list, nodeList, rooted: !!S.cladRoot, t1, len, minLen, ci: len ? minLen / len : 1 };
   }
+  // PTA Collatio+: places of a variation formula, each with its entry and a link into the synopsis
+  const appKeyOf = (u) => { const a = u.dom && u.dom.app && u.dom.app.closest ? u.dom.app.closest('app[n]') : null; return a && window.parent !== window ? a.getAttribute('n') : null; };
+  const formulaPlaces = (f) => `<details class="cf-places"><summary>${L('Belege')}</summary><ul>` + f.items.map((u, i) => {
+    const sec = secOf(u.section), k = appKeyOf(u), tx = f.texts[i] || [];
+    return `<li><button type="button" class="link" data-go="${u.id}">${esc(sec ? sec.label : '')} · ${L('Wort')} ${u.pos + 1}</button> <span class="grc">${esc(tx[0] || 'om.')}</span> | <span class="grc">${esc(tx[1] || 'om.')}</span>`
+      + (k ? ` · <button type="button" class="link" data-appkey="${esc(k)}">${L('im Graph zeigen')}</button>` : '') + '</li>';
+  }).join('') + '</ul></details>';
   function salemansPanel(C) {
     const d = S.stemmaSel;
     const head = (t) => `<div class="panel-head"><h3>${t}</h3>${d ? `<button class="link" id="pclose" type="button">${L('Schließen')}</button>` : ''}</div>`;
@@ -2791,12 +2801,12 @@ header.work { border-bottom: 0; padding-bottom: 0; }
     h += `<p class="note">${L('{a} Stellen: {b} Typ-2, {c} nur Einzelabweichungen (Typ 1), {d} mit mehr als zwei Varianten, {e} ohne Varianz', { a: s.units, b: s.type2, c: s.type1, d: s.other, e: s.invariant })}${s.transp + s.order ? '; ' + L('{n} mit Umstellung ausgenommen', { n: s.transp + s.order }) : ''}${s.freq ? '; ' + L('{n} nur mit häufigen Wörtern ausgenommen', { n: s.freq }) : ''}.</p>`;
     if (C.minLen) h += `<p class="note">${L('Baumlänge {l} bei Mindestlänge {m}: Konsistenzindex CI = {c}', { l: C.len, m: C.minLen, c: C.ci.toFixed(3) })}${C.ci < 1 ? ' – ' + L('unverträgliche Formeln erfordern Mehrfachentstehung') : ''}.</p>`;
     h += `<p class="note"><b>${L('{n} Variationsformeln angenommen', { n: C.acc.length })}</b> (${L('mind. {m} Belege', { m: S.cladMin })}; ${L('Häkchen entfernen, um eine Formel nach philologischer Prüfung auszuschließen')}):</p><ul class="conf">` +
-      C.acc.slice(0, 40).map((f) => `<li>${cb(f, true)}${fmt(f)}</label> · ${f.items.length}<br><span class="tag">${ex(f)}</span></li>`).join('') + (C.acc.length > 40 ? '<li>…</li>' : '') + '</ul>';
+      C.acc.slice(0, 40).map((f) => `<li>${cb(f, true)}${fmt(f)}</label> · ${f.items.length}<br><span class="tag">${ex(f)}</span>${formulaPlaces(f)}</li>`).join('') + (C.acc.length > 40 ? '<li>…</li>' : '') + '</ul>';
     const conf = C.rej.filter((r) => r.clash);
     if (conf.length) h += `<p class="note"><b>${L('Unverträgliche Formeln')}</b> (${L('Hinweis auf Kontamination oder Parallelentwicklung – oder auf eine nicht genealogische Variante')}):</p><ul class="conf">` +
-      conf.slice(0, 20).map((r) => `<li>${cb(r.f, true)}${fmt(r.f)}</label> · ${r.f.items.length} <span class="tag">${L('gegen')} ${fmt(r.clash)}</span><br><span class="tag">${ex(r.f)}</span></li>`).join('') + '</ul>';
+      conf.slice(0, 20).map((r) => `<li>${cb(r.f, true)}${fmt(r.f)}</label> · ${r.f.items.length} <span class="tag">${L('gegen')} ${fmt(r.clash)}</span><br><span class="tag">${ex(r.f)}</span>${formulaPlaces(r.f)}</li>`).join('') + '</ul>';
     const off = C.rej.filter((r) => r.off);
-    if (off.length) h += `<p class="note"><b>${L('Ausgeschlossen')}</b>:</p><ul class="conf">` + off.map((r) => `<li>${cb(r.f, false)}${fmt(r.f)}</label> · ${r.f.items.length}</li>`).join('') + '</ul>';
+    if (off.length) h += `<p class="note"><b>${L('Ausgeschlossen')}</b>:</p><ul class="conf">` + off.map((r) => `<li>${cb(r.f, false)}${fmt(r.f)}</label> · ${r.f.items.length}${formulaPlaces(r.f)}</li>`).join('') + '</ul>';
     const low = C.rej.filter((r) => r.low).length;
     if (low) h += `<p class="note">${L('{n} weitere Formeln mit zu wenigen Belegen', { n: low })}.</p>`;
     const zero = C.R0.wits.filter((w) => !(C.t1.get(w) || []).length);
@@ -2838,18 +2848,23 @@ header.work { border-bottom: 0; padding-bottom: 0; }
       const ds = hier.descendants().filter((n) => n.data.kind === 'wit' && dating(n.data.w)).map((n) => dating(n.data.w));
       const lo = Math.floor((d3.min(ds, (d) => d.from) - 1) / 100) * 100, hi = Math.ceil(d3.max(ds, (d) => d.to) / 100) * 100;
       const tH = Math.max(300, ((hi - lo) / 100) * 46);
-      ty = d3.scaleLinear().domain([lo, hi]).range([top + 70, top + 70 + tH]);
+      // Platz über der Zeitachse für die hypothetischen Knoten: je Schachtelungsebene eine Stufe
+      const STEP = 26;
+      const depthOf = (n) => (n.data.kind === 'wit' ? 0 : 1 + Math.max(0, ...(n.children || []).map(depthOf)));
+      const t0 = top + 24 + Math.max(2, depthOf(hier)) * STEP;
+      ty = d3.scaleLinear().domain([lo, hi]).range([t0, t0 + tH]);
       const undated = ty.range()[1] + 50;
       H = undated + 50;
       hier.leaves().concat(hier.descendants().filter((n) => n.data.kind === 'wit')).forEach((n) => {
         const d = dating(n.data.w);
         n.y = d ? ty((d.from + d.to) / 2) : undated;
       });
-      // Gruppenknoten über ihren frühesten Zeugen, Wurzel ganz oben
-      hier.eachAfter((n) => { if (n.data.kind !== 'wit' && n.children) n.y = d3.min(n.children, (c) => c.y) - 34; });
-      hier.y = top;
-      hier.eachBefore((n) => { if (n.parent && n.data.kind !== 'wit' && n.y < n.parent.y + 18) n.y = n.parent.y + 18; });
-      R.timeUndated = undated;
+      // Gruppenknoten eine Stufe über ihrem frühesten Nachkommen, so dass jede Ebene ihre eigene Höhe hat
+      hier.eachAfter((n) => { if (n.data.kind !== 'wit' && n.children) n.y = d3.min(n.children, (c) => c.y) - STEP; });
+      // ungenutzten Raum oberhalb des obersten Knotens entfernen (Beschriftung „Datierung“ braucht Platz über der Achse)
+      const shift = Math.max(0, Math.min(d3.min(hier.descendants(), (n) => n.y) - (top + 10), t0 - (top + 40)));
+      if (shift) { hier.each((n) => { n.y -= shift; }); ty.range(ty.range().map((v) => v - shift)); H -= shift; }
+      R.timeUndated = undated - shift;
     }
     const svg = svgBase(W, H);
     const g = svg.append('g').attr('transform', 'translate(40,0)');
@@ -2857,8 +2872,8 @@ header.work { border-bottom: 0; padding-bottom: 0; }
       const cent = d3.range(ty.domain()[0], ty.domain()[1] + 1, 100);
       g.selectAll('line.tgrid').data(cent).join('line').attr('class', 'grid faint tgrid').attr('x1', 0).attr('x2', W - 80).attr('y1', (v) => ty(v)).attr('y2', (v) => ty(v));
       svg.selectAll('text.tlab').data(cent).join('text').attr('class', 'tick mono tlab').attr('x', 34).attr('y', (v) => ty(v) + 3).attr('text-anchor', 'end').text((v) => v);
-      if (hier.descendants().some((n) => n.data.kind === 'wit' && !dating(n.data.w))) svg.append('text').attr('class', 'tick tlab').attr('x', 34).attr('y', R.timeUndated + 3).attr('text-anchor', 'end').text(L('undatiert'));
-      svg.append('text').attr('class', 'axis-note').attr('x', 4).attr('y', top + 56).text(L('Datierung'));
+      if (hier.descendants().some((n) => n.data.kind === 'wit' && !dating(n.data.w))) svg.append('text').attr('class', 'tick tlab').attr('x', 4).attr('y', R.timeUndated + 3).text(L('undatiert'));
+      svg.append('text').attr('class', 'axis-note').attr('x', 4).attr('y', ty.range()[0] - 16).text(L('Datierung'));
     }
     if (mode === 'dendro') {
       const ax = d3.axisLeft(R.dendroScale).ticks(5).tickFormat((v) => Math.round(v * 200) + ' %');
@@ -2867,20 +2882,27 @@ header.work { border-bottom: 0; padding-bottom: 0; }
       svg.append('text').attr('class', 'axis-note').attr('x', 4).attr('y', 14).text(L('Abweichende Lesarten zwischen den Gruppen'));
     }
     // Kanten
+    // Knick der Verbindung: ohne Zeitachse auf halber Höhe, mit Zeitachse direkt unter dem Ausgangsknoten,
+    // damit alle Geschwister an einer gemeinsamen Querlinie hängen
+    const elbow = (d) => (timeOn ? Math.min(d.source.y + 14, d.target.y) : (d.source.y + d.target.y) / 2);
     if (mode === 'salemans') g.selectAll('text.esup').data(hier.links().filter((d) => d.target.data.esup)).join('text').attr('class', 'tick esup mono')
-      .attr('x', (d) => d.target.x + 5).attr('y', (d) => (d.source.y + d.target.y) / 2 + 12).text((d) => d.target.data.esup);
+      .attr('x', (d) => d.target.x + (timeOn ? -5 : 5)).attr('text-anchor', timeOn ? 'end' : 'start').attr('y', (d) => (timeOn ? elbow(d) + 11 : (d.source.y + d.target.y) / 2 + 12)).text((d) => d.target.data.esup);
     g.selectAll('path.slink').data(hier.links()).join('path')
       .attr('class', (d) => 'slink' + (d.target.data.dashed ? ' dashed' : '') + (mode === 'salemans' && !res.rooted ? ' unrooted' : ''))
       .attr('d', (d) => mode === 'dendro'
         ? `M${d.source.x},${d.source.y}H${d.target.x}V${d.target.y}`
-        : `M${d.source.x},${d.source.y}V${(d.source.y + d.target.y) / 2}H${d.target.x}V${d.target.y}`);
+        : `M${d.source.x},${d.source.y}V${elbow(d)}H${d.target.x}V${d.target.y}`);
     // Knoten
     const node = g.selectAll('g.snode2').data(hier.descendants()).join('g').attr('class', (d) => 'snode2 k-' + d.data.kind).attr('transform', (d) => `translate(${d.x},${d.y})`);
     node.filter((d) => d.data.kind !== 'wit').append('circle').attr('r', (d) => (d.data.kind === 'root' ? 6 : 4.5));
     node.filter((d) => d.data.kind !== 'wit' && mode !== 'dendro').each(function (d) {
-      const t = d3.select(this).append('text').attr('class', 'slab-g').attr('x', 8).attr('y', -6);
+      // Beschriftung neben dem Knoten, auf Höhe des Punkts: so bleibt sie frei von der Querlinie darüber und darunter
+      const t = d3.select(this).append('text').attr('class', 'slab-g').attr('x', 8).attr('y', 4);
       if (d.data.parts && d.data.label == null) svgParts(t, d.data.parts); else t.text(d.data.label || '');
-      if (d.data.support) d3.select(this).append('text').attr('class', 'slab-n mono').attr('x', 8).attr('y', 8).text(d.data.support);
+      if (d.data.support) {
+        let w = 0; try { w = t.node().getComputedTextLength(); } catch (e) { w = 8 * String(d.data.label || '').length; }
+        d3.select(this).append('text').attr('class', 'slab-n mono').attr('x', 8 + w + 4).attr('y', 4).text(d.data.support);
+      }
     });
     const lw = node.filter((d) => d.data.kind === 'wit');
     lw.append('circle').attr('r', 4).attr('class', (d) => 'leaf ' + groupColorClass(d.data.w));
@@ -2899,6 +2921,7 @@ header.work { border-bottom: 0; padding-bottom: 0; }
         .text((d) => { const t = fmtDate(dating(d.data.w)); return t.length > maxCh ? t.slice(0, maxCh - 1) + '…' : t; })
         .append('title').text((d) => fmtDate(dating(d.data.w)));
     }
+    g.selectAll('text.esup').raise(); // Kantenzahlen über den Linien
     node.style('cursor', 'pointer')
       .on('mousemove', (ev, d) => tipShow(ev, stemmaTip(d.data, mode)))
       .on('mouseleave', tipHide)

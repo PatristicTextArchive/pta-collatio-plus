@@ -34,8 +34,9 @@ DEFAULT_REFSDECL = {
     "pta": ("(.+)", "https://pta.bbaw.de/text/$1", "References to texts in the PTA are given as PTA-URNs."),
     "perseus": ("(.+)", "https://scaife.perseus.org/reader/$1",
                 "References to texts in the Perseus Digital Library are given as CTS-URNs."),
-    "cllg": ("(.+)", "https://gitlab.inria.fr/almanach/cllg/freed-corpus/-/search?search=$1",
-             "References to texts of the Corpus Liberatum Linguae Graecae are given as CTS-URNs."),
+    "cllg": ("urn:cts:greekLit:(tlg[0-9]{4})\\.(tlg[0-9]{3})\\.(.+)",
+             "https://gitlab.inria.fr/almanach/cllg/freed-corpus/-/blob/main/data/$1/$2/$1.$2.$3",
+             "References to CLLG-CTS-URNs"),
 }
 
 
@@ -590,7 +591,7 @@ class TeiExporter:
             wit = _sub(lw, "witness", {f"{{{XML}}}id": ms, "corresp": os.path.basename(w["file"])})
             _sub(wit, "abbr", {"type": "siglum"}, w["siglum"])
             _sub(wit, "name", {"key": info.key}, info.name)
-            _sub(wit, "origDate", None, info.orig_date or None)
+            _sub(wit, "origDate", info.orig_date_attrs or None, info.orig_date or None)
             locus = None
             if info.first_page:
                 locus = f"f. {info.first_page}" + (f"–{info.last_page}" if info.last_page and info.last_page != info.first_page else "")
@@ -634,6 +635,8 @@ class TeiExporter:
                 cp = _sub(el, "cRefPattern", {"matchPattern": pattern, "replacementPattern": repl})
                 _sub(cp, "p", None, note)
                 refs.append(el)
+        # as in the PTA editions: cllg is the last refsDecl, directly before editorialDecl
+        refs.sort(key=lambda r: r.get(f"{{{XML}}}id") == "cllg")
         for el in refs + rest:
             enc.append(el)
         names = {etree.QName(c).localname for c in enc}

@@ -38,8 +38,8 @@ EN = {
     "Einstellungen geändert – Kollation neu starten": "Settings changed – run the collation again",
     "Patristisches Textarchiv": "Patristic Text Archive",
     "Patristisches Textarchiv (PTA)": "Patristic Text Archive (PTA)",
-    "AV „Die Alexandrinische und antiochenische Bibelexegese in der Spätantike“":
-        "Academy project „Die Alexandrinische und antiochenische Bibelexegese in der Spätantike“",
+    "AV „Die alexandrinische und antiochenische Bibelexegese in der Spätantike“":
+        "Academy project „Die alexandrinische und antiochenische Bibelexegese in der Spätantike“",
     "Sprache / Language": "Language",
 
     # ---------------------------------------------------------------- project
@@ -200,11 +200,11 @@ EN = {
     "Zwei aufeinanderfolgende Wörter, zwischen denen ein einfaches <lb/>, <cb/> oder <pb/> steht, ergeben zusammen ein Wort, das andere Zeugen als ein Wort haben, z. B. καταλαμ <lb/> βάνει. Zeile = Zeile in der XML-Datei.":
         "Two consecutive words separated by a plain <lb/>, <cb/> or <pb/> together make up a word that other witnesses have as one word, e.g. καταλαμ <lb/> βάνει. Line = line in the XML file.",
     "Zusammengeschriebene Wörter (fehlender Wortzwischenraum)": "Words written together (missing space)",
-    "Das Wort wird mit seinen Nachbarwörtern an derselben Stelle mit den anderen Handschriften verglichen: Haben sie dort zwei (oder drei) Wörter, die zusammen dieses Wort ergeben (σωτῆροςἑρμηνεία → σωτῆρος ἑρμηνεία), wird es gemeldet, sofern mehr Handschriften trennen als ebenso zusammenschreiben und entweder mindestens ein Viertel der übrigen Handschriften trennt oder das Wort selbst ein Indiz trägt (zwei Akzente, Spiritus im Wortinneren, Interpunktion zwischen Buchstaben). Jeder Teil wird für sich normalisiert, ein ν ephelkystikon oder ein Tippfehler im entfernteren Teil stört also nicht. Ohne Indiz sind es oft zusammengeschriebene Proklitika (διατοῦτο, ἐξαυτοῦ), die man auch so belassen kann.":
-        "The word and its neighbouring words are compared with the other manuscripts at the same place: if they have two (or three) words there that together make up this word (σωτῆροςἑρμηνεία → σωτῆρος ἑρμηνεία), it is reported, provided more manuscripts separate than write it the same way and either at least a quarter of the other manuscripts separate or the word itself shows a sign (two accents, a breathing inside the word, punctuation between letters). Each part is normalised on its own, so a ν ephelkystikon or a typo in the more distant part does not get in the way. Without such a sign these are often proclitics written together (διατοῦτο, ἐξαυτοῦ), which may also be left as they are.",
+    "Das Wort wird mit seinen Nachbarwörtern an derselben Stelle mit den anderen Handschriften verglichen: Haben sie dort zwei (oder drei) Wörter, die zusammen dieses Wort ergeben (σωτῆροςἑρμηνεία → σωτῆρος ἑρμηνεία), wird es gemeldet, sofern mehr Handschriften trennen als ebenso zusammenschreiben und entweder mindestens ein Viertel der übrigen Handschriften trennt oder das Wort selbst ein Indiz trägt (zwei Akzente, Spiritus im Wortinneren, Interpunktion zwischen Buchstaben). Jeder Teil wird für sich normalisiert, ein ν ephelkystikon oder ein Tippfehler im entfernteren Teil stört also nicht. Ohne Indiz sind es oft zusammengeschriebene Proklitika (διατοῦτο, ἐξαυτοῦ), die man auch so belassen kann. Zeile = Zeile in der XML-Datei (bei mehreren gleichen Wörtern auf der Seite alle).":
+        "The word and its neighbouring words are compared with the other manuscripts at the same place: if they have two (or three) words there that together make up this word (σωτῆροςἑρμηνεία → σωτῆρος ἑρμηνεία), it is reported, provided more manuscripts separate than write it the same way and either at least a quarter of the other manuscripts separate or the word itself shows a sign (two accents, a breathing inside the word, punctuation between letters). Each part is normalised on its own, so a ν ephelkystikon or a typo in the more distant part does not get in the way. Without such a sign these are often proclitics written together (διατοῦτο, ἐξαυτοῦ), which may also be left as they are. Line = line in the XML file (all of them if the same word occurs several times on the page).",
     "Lateinische Buchstaben in griechischen Wörtern": "Latin letters in Greek words",
-    "Lateinische Zeichen, die wie griechische aussehen (K statt Κ, o statt ο). Für das Ausrichten werden sie schon gleichgesetzt; in der Transkription sollten sie korrigiert werden.":
-        "Latin characters that look like Greek ones (K for Κ, o for ο). For the alignment they are already treated as equal; they should be corrected in the transcription.",
+    "Lateinische Zeichen, die wie griechische aussehen (K statt Κ, o statt ο). Für das Ausrichten werden sie schon gleichgesetzt; in der Transkription sollten sie korrigiert werden. Zeile = Zeile in der XML-Datei.":
+        "Latin characters that look like Greek ones (K for Κ, o for ο). For the alignment they are already treated as equal; they should be corrected in the transcription. Line = line in the XML file.",
     "Zeuge": "Witness",
     "Zeile": "Line",
     "Getrennt": "Split",

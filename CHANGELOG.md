@@ -1,5 +1,14 @@
 # Änderungen
 
+## 0.1.1 – 2026-11-03
+
+- Prüfung der Transkriptionen: Zeilennummer in der XML-Datei jetzt auch bei zusammengeschriebenen Wörtern und lateinischen Buchstaben (bei mehrfachem Vorkommen auf der Seite alle Zeilen).
+- Datierung der Zeugen im `listWit` aus `msDesc/history/origin/origDate` der Transkription, mit allen Attributen der maschinenlesbaren Datierung (`@when`, `@notBefore`/`@notAfter`, `@from`/`@to`, `-iso`-Formen, `@calendar` usw.) unverändert; ohne diesen Eintrag bleibt `origDate` leer (bisher: erstes `origDate` irgendwo im `msDesc`, ohne Attribute).
+- TEI-Export: `refsDecl xml:id="cllg"` mit dem Muster der PTA-Editionen (`urn:cts:greekLit:…` → Datei im FREED-Korpus des CLLG), als letzte `refsDecl` direkt vor der `editorialDecl`.
+- Varianzübersicht, kladistisches Stemma (Salemans): Unter jeder Variationsformel lassen sich ihre Belege aufklappen; jede Stelle öffnet den Apparateintrag oder mit *im Graph zeigen* die Synopse.
+- Schreibfehler korrigiert.
+- Stemma-View wurde auf den aktuellsten Stand gebracht.
+
 ## 0.1.0 – 2026-11-02
 
 Erste Version.
@@ -17,4 +26,4 @@ Erste Version.
 - Das PTA-Schema wird mit GitHub abgeglichen; eine neue Fassung wird nach einer Kontrolle übernommen und das Kollationsschema daraus abgeleitet (abschaltbar).
 - Exporte: TEI nach PTA-Schema (mit Prüfung), HTML-Synopse, CSV, Nexus, CollateX-JSON; Varianzübersicht (Arbeitsfassung) für den TEI-Export, erzeugt mit `scripts/build_varianz.py`.
 - Oberfläche auf Deutsch und Englisch; Farbschema wie im System, hell oder dunkel.
-- Alle Schriften und Bibliotheken liegen bei; keine Verbindungen zu fremden Servern (auch nicht zu Google Fonts).
+- Alle Schriften und Bibliotheken liegen bei; die Oberfläche stellt keine Verbindungen zu fremden Servern her (auch nicht zu Google Fonts). Einzige Verbindung nach außen ist der Abgleich des PTA-Schemas durch den lokalen Server mit GitHub (abschaltbar).

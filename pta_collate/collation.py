@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import os
+import re
 import time
 
 from . import extract as ex
@@ -90,6 +92,41 @@ def join_pairs(seq: list[dict], pairs: set) -> list[dict]:
     return out
 
 
+_FILE_TEXT: dict = {}
+
+
+def source_lines(path: str | None, page: str | None, word: str) -> list[int]:
+    """Lines of the XML file where ``word`` stands (on page ``page`` if given), for the
+    transcription check. The word is searched in the file text with tags (e.g. <lb break="no"/>,
+    <hi>) allowed between its letters; on the page from its <pb n="…"/> to the next <pb/>."""
+    import unicodedata
+    if not path or not word:
+        return []
+    try:
+        st = os.stat(path)
+        key = (path, st.st_mtime)
+        if key not in _FILE_TEXT:
+            with open(path, encoding="utf-8") as fh:
+                _FILE_TEXT.clear()
+                _FILE_TEXT[key] = unicodedata.normalize("NFC", fh.read())
+        text = _FILE_TEXT[key]
+    except (OSError, UnicodeDecodeError):
+        return []
+    word = unicodedata.normalize("NFC", word)
+    pat = re.compile(r"(?:\s*<[^>]*>\s*)*".join(re.escape(ch) for ch in word))
+    start, end = 0, len(text)
+    if page:
+        m = re.search(r'<pb\b[^>]*\bn="' + re.escape(page) + r'"', text)
+        if m:
+            start = m.end()
+            nxt = re.search(r"<pb\b", text[start:])
+            end = start + nxt.start() if nxt else len(text)
+    hits = [m.start() for m in pat.finditer(text, start, end)]
+    if not hits and (start, end) != (0, len(text)):
+        hits = [m.start() for m in pat.finditer(text)]
+    return sorted({text.count("\n", 0, h) + 1 for h in hits})[:5]
+
+
 def mixed_script(streams: dict[str, list[dict]], files: dict[str, str]) -> list[dict]:
     """Greek words that contain Latin letters (e.g. a Latin K typed for a Greek Κ)."""
     from .normalize import has_greek, has_latin
@@ -100,7 +137,8 @@ def mixed_script(streams: dict[str, list[dict]], files: dict[str, str]) -> list[
             if has_greek(d["t"]) and has_latin(d["t"]) and (ms, d["t"], d.get("page")) not in seen:
                 seen.add((ms, d["t"], d.get("page")))
                 latin = "".join(sorted({ch for ch in d["t"] if "a" <= ch.lower() <= "z"}))
-                out.append({"wit": ms, "file": files.get(cid), "page": d.get("page"), "word": d["t"], "latin": latin})
+                out.append({"wit": ms, "file": files.get(cid), "page": d.get("page"), "word": d["t"], "latin": latin,
+                            "lines": source_lines(files.get(cid), d.get("page"), d["t"])})
     return out
 
 
@@ -332,6 +370,7 @@ def fused_words(streams: dict[str, list[dict]], files: dict[str, str], profile: 
                 seen[key]["tokens"].append(d["id"])
                 continue
             entry = {"wit": ms, "file": files.get(cid), "page": d.get("page"), "word": d["t"],
+                     "lines": source_lines(files.get(cid), d.get("page"), d["t"]),
                      "split": " ".join(parts), "count": count, "evidence": evidence, "parts": parts,
                      "support": sup, "same": here, "local": bool(sup),
                      "context": " ".join(z for z in (seq[i - 1]["t"] if i else "", d["t"],

@@ -1,6 +1,6 @@
 [project]
 name = "pta-collatio-plus"
-version = "0.1.0"
+version = "0.1.1"
 description = "Kollation von PTA-Transkriptionen mit Web-Oberfläche, farbiger Synopse und TEI-Export nach PTA-Schema"
 readme = "README.md"
 requires-python = ">=3.10"
