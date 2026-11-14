@@ -40,7 +40,7 @@
     const res = await fetch(url, { method, headers: body ? { "Content-Type": "application/json" } : {}, body: body ? JSON.stringify(body) : undefined });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) throw new Error(data.error || data.detail || res.statusText);
-    return data;
+    return PTASynopsis.inflate(data);   // compact units → full cells (no-op for other answers)
   }
   function toast(msg, err) {
     const t = document.createElement("div");

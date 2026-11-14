@@ -11,6 +11,8 @@ from __future__ import annotations
 from .builtin import align_builtin
 from .collatex import align_collatex, collatex_available
 
+__all__ = ["ALIGNERS", "run_aligner", "align_builtin", "align_collatex", "collatex_available"]
+
 ALIGNERS = {
     "builtin": "Eingebaut (Inseln + Needleman-Wunsch mit affinen Lücken, ohne Java)",
     "collatex": "CollateX: Dekker-Algorithmus (Java)",

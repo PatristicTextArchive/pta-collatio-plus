@@ -505,7 +505,6 @@ def _end_line(el) -> int:
 
 
 def _walk_inner(el, layer, stream, flags, hand, seg_mode, gaps, nomsac):
-    tag = etree.QName(el).localname
     stream.line = el.sourceline or stream.line
     if el.text:
         if not (_is_tight(el) and not el.text.strip()):

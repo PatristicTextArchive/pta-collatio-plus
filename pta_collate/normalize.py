@@ -108,6 +108,11 @@ def comparison_form(t: str, profile: "Profile | None" = None) -> str:
     return s
 
 
+# iota adscriptum: τῶι, τῆι, αὐτῆι (manuscripts) = τῷ, τῇ, αὐτῇ. Folded only after η and ω,
+# where ι cannot be anything else; after α it would also hit the real diphthong αι (καί, -σθαι)
+IOTA_ADSCRIPT = re.compile(r"(?<=[ηω])ι")
+
+
 def _strip_marks(s: str, profile: Profile) -> str:
     drop = set()
     if profile.accents:
@@ -120,7 +125,11 @@ def _strip_marks(s: str, profile: Profile) -> str:
         return unicodedata.normalize("NFC", s)
     d = unicodedata.normalize("NFD", s)
     d = "".join(ch for ch in d if ch not in drop)
-    return unicodedata.normalize("NFC", d)
+    s = unicodedata.normalize("NFC", d)
+    if profile.iota_subscript:
+        # the adscript iota (its own letter after the marks are gone)
+        s = unicodedata.normalize("NFC", IOTA_ADSCRIPT.sub("", unicodedata.normalize("NFD", s)))
+    return s
 
 
 def fold_orthography(s: str) -> str:
@@ -139,10 +148,8 @@ def alignment_form(c: str, profile: Profile) -> str:
         s = s.replace("’", "")
     if profile.final_sigma:
         s = s.replace("ς", "σ").replace("ϲ", "σ")
-    if profile.nu_ephelkystikon and len(s) > 2 and s.endswith("ν"):
-        bare = s
-        if bare not in NU_STOP and (re.search(r"(σ|ξ|ψ|στ)ιν$", bare) or (bare.endswith("εν") and len(bare) >= 5)):
-            s = s[:-1]
+    if profile.nu_ephelkystikon:
+        s = _strip_nu(s)
     if profile.itacism_in_alignment:
         s = fold_orthography(s)
     for pat, rep in profile.custom or []:
@@ -153,11 +160,20 @@ def alignment_form(c: str, profile: Profile) -> str:
     return s or c
 
 
+def _strip_nu(s: str) -> str:
+    """ν ephelkystikon: dropped after -σι/-ξι/-ψι/-στι and -ε (not in NU_STOP words)."""
+    if len(s) > 2 and s.endswith("ν") and s not in NU_STOP \
+            and (re.search(r"(σ|ξ|ψ|στ)ιν$", s) or (s.endswith("εν") and len(s) >= 5)):
+        return s[:-1]
+    return s
+
+
 def ortho_key(n: str) -> str:
     """Orthographic key: always folds itacism and gemination, also accents/case."""
     s = fix_lookalikes(n).lower()
     d = unicodedata.normalize("NFD", s)
     d = "".join(ch for ch in d if ch not in ACCENTS | BREATHINGS | IOTA_SUB)
+    d = IOTA_ADSCRIPT.sub("", d)
     s = unicodedata.normalize("NFC", d).replace("ς", "σ").replace("’", "")
     return fold_orthography(s)
 
@@ -172,7 +188,11 @@ def forms(t: str, profile: Profile, gap: bool = False) -> tuple[str, str, str]:
     if not bare:  # pure punctuation token that counts (ignore_punctuation off)
         return c, c, c
     n = alignment_form(bare, profile)
-    return c, n, ortho_key(n)
+    o = ortho_key(n)
+    if profile.nu_ephelkystikon:
+        # once more after folding: an itacistic spelling (ἔκστασην) gets the same key as ἔκστασιν
+        o = _strip_nu(o)
+    return c, n, o
 
 
 def strip_punctuation(s: str) -> str:

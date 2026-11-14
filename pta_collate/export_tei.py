@@ -567,7 +567,7 @@ class TeiExporter:
         ts = _sub(fd, "titleStmt")
         old_title = old.find("tei:fileDesc/tei:titleStmt/tei:title", ex.NS)
         title_text = self.proj.get("title") or (ex._text(old_title).split(" (")[0] + " (Kollation)" if old_title is not None else "Kollation")
-        t = _sub(ts, "title", {f"{{{XML}}}lang": old_title.get(f"{{{XML}}}lang") if old_title is not None else None}, title_text)
+        _sub(ts, "title", {f"{{{XML}}}lang": old_title.get(f"{{{XML}}}lang") if old_title is not None else None}, title_text)
         for a in old.findall("tei:fileDesc/tei:titleStmt/tei:author", ex.NS):
             ts.append(copy.deepcopy(a))
         ed = self.proj.get("editor") or {}

@@ -141,7 +141,6 @@ def test_move_token(run):
     p = copy.deepcopy(p)
     m = build(res, p)
     u = next(u for u in m.units if u["variant"] and len(u["grid"]) == 1 and u["seg"] != "0")
-    prev = m.units[m.units.index(u) - 1]
     wit = next(w for w in m.wits if u["cells"].get(w, {}).get("tokens"))
     tok = u["cells"][wit]["tokens"][0]
     p["edits"].append({"op": "move", "token": tok, "dir": "prev"})
@@ -311,7 +310,6 @@ def test_islands_and_affine_gaps_keep_phrases_together():
 
 
 def test_long_transposition_is_suggested_and_confirmable(run):
-    import random
     from pta_collate.normalize import Profile, forms
     p = Profile.from_dict(None)
     base = "τὸν δὲ ἄνθρωπον πλάσας ἐκ γῆς ἐνεφύσησεν εἰς τὸ πρόσωπον αὐτοῦ πνοὴν ζωῆς καὶ ἐγένετο ὁ ἄνθρωπος εἰς ψυχὴν ζῶσαν· ταῦτα μὲν οὖν ἡ γραφὴ διδάσκει ἡμᾶς περὶ τῆς πλάσεως τοῦ ἀνθρώπου καὶ τῆς ψυχῆς αὐτοῦ".split()
@@ -412,8 +410,6 @@ def test_punctuation_only_difference_is_not_orthographic(run):
     p["normalization"] = dict(p["normalization"], ignore_punctuation=False)
     res = collation.run(p)
     m = build(res, p)
-    punct = [r for u in m.units if u["variant"] for r in u["readings"]
-             if r["group"] and r["cause"] is None and r["c"] != r["t"].lower().strip()]
     for u in m.units:
         for r in u["readings"]:
             if r["cause"] == "orthographic":
@@ -709,3 +705,85 @@ def test_refsdecl_cllg_is_last(run):
     assert cp.get("matchPattern") == r"urn:cts:greekLit:(tlg[0-9]{4})\.(tlg[0-9]{3})\.(.+)"
     assert cp.get("replacementPattern") == "https://gitlab.inria.fr/almanach/cllg/freed-corpus/-/blob/main/data/$1/$2/$1.$2.$3"
     assert cp.findtext("t:p", namespaces=TEI) == "References to CLLG-CTS-URNs"
+
+
+def test_short_transposition_with_orthographic_variants_and_lacuna():
+    pre = "τότε ἐπέβαλεν ἐπὶ τὸν ἀδὰμ".split()
+    post = "καὶ ὕπνωσεν καὶ λαμβάνει μίαν τῶν πλευρῶν αὐτοῦ".split()
+    a = pre + "ἔκστασιν ὁ θεὸς".split() + post
+    b = pre + "ὁ θεὸς ἔκστασιν".split() + post
+    texts = {"Aa": a, "Aq": a, "Pk": pre + "ἔκστασην ὁ θεὸς".split() + post,
+             "Am": b, "Ca": b, "Ea": pre + "ὁ θεός. ἐκστασῖν".split() + post,
+             # no text before "ὁ θεὸς": a lacuna, so it has no say at the first place
+             "Lx": "ὁ θεὸς ἔκστασιν".split() + post}
+    result, proj = _three_witnesses(texts, {"lacuna_min": 3})
+    m = build(result, proj)
+    tr = [u for u in m.units if u["transposition"]]
+    assert len(tr) == 1, [(u["key"], [(r["t"], r["wits"]) for r in u["readings"]]) for u in m.units if u["variant"]]
+    assert {"ἔκστασιν ὁ θεὸς", "ὁ θεὸς ἔκστασιν"} <= {r["t"] for r in tr[0]["readings"]}
+
+
+def test_frequent_word_added_at_two_places_is_not_a_transposition():
+    # καί is frequent in the text; two minorities add it at different places: two additions
+    base = ("ὁ θεὸς ἐποίησεν τὸν ἄνθρωπον καὶ ἔπλασεν αὐτὸν καὶ ἐνεφύσησεν εἰς αὐτὸν πνοὴν ζωῆς καὶ ἐγένετο "
+            "ὁ ἄνθρωπος εἰς ψυχὴν ζῶσαν καὶ ἔθετο αὐτὸν ἐν τῷ παραδείσῳ καὶ εἶπεν αὐτῷ").split()
+    i = base.index("ἔθετο")
+    texts = {"A": base, "B": base, "C": base, "D": base,
+             "E": base[:i] + ["καὶ"] + base[i:],                 # adds καί before ἔθετο
+             "F": base[:i + 2] + ["καὶ"] + base[i + 2:]}         # adds καί after αὐτὸν
+    result, proj = _three_witnesses(texts)
+    m = build(result, proj)
+    assert not any(u["transposition"] for u in m.units)
+    # but when every witness has the word at exactly one of the two places, it is one
+    texts = {"A": base, "B": base, "C": base,
+             "D": base[:i] + ["καὶ"] + base[i:], "E": base[:i] + ["καὶ"] + base[i:]}
+    for w in ("D", "E"):
+        t = texts[w]; k = t.index("καὶ", i + 1); del t[k]       # … moved before ἔθετο
+    result, proj = _three_witnesses(texts)
+    m = build(result, proj)
+    tr = [u for u in m.units if u["transposition"]]
+    assert len(tr) == 1 and {r["t"] for r in tr[0]["readings"]} == {"ἔθετο αὐτὸν ἐν τῷ παραδείσῳ καὶ", "καὶ ἔθετο αὐτὸν ἐν τῷ παραδείσῳ"}
+
+
+def test_weak_texts():
+    result, proj = _three_witnesses(DISPLACED)
+    m = build(result, proj)
+    m.frequent = {"και", "ο", "τιν"}
+    assert m._weak("και") and m._weak("ο") and m._weak("και ο")        # only frequent words
+    assert m._weak("δι") and m._weak("οι")                             # fewer than four letters
+    assert not m._weak("ψιχιν") and not m._weak("και ψιχιν")           # a distinctive word
+
+
+def test_transposed_word_group_within_window_is_one_unit():
+    pre = "σὺν τῷ σώματι ἀπέστειλεν".split(); post = "ἐκεῖθεν γὰρ αὐτῶν λέγει τὴν ζωὴν".split()
+    maj = pre + "συναφανίζει τῶ σώματι καὶ τὴν ψυχὴν".split() + post
+    texts = {"A": maj, "B": maj, "C": maj, "D": pre + "συναφανίζει τῶι σώματι καὶ τὴν ψυχήν".split() + post,
+             "Ca": pre + "καὶ τὴν ψυχὴν συναφανίζει καὶ σῶματι".split() + post}
+    result, proj = _three_witnesses(texts)
+    m = build(result, proj)
+    tr = [u for u in m.units if u["transposition"]]
+    assert len(tr) == 1 and not m.auto_links, [(u["key"], [(r["t"], r["wits"]) for r in u["readings"]]) for u in m.units if u["variant"]]
+    ca = next(r for r in tr[0]["readings"] if "Ca" in r["wits"])
+    assert ca["t"] == "καὶ τὴν ψυχὴν συναφανίζει καὶ σῶματι" and ca["type"] == "transposition"
+    # further apart than the window: two units, suggested as a long transposition
+    far = "ἐκεῖθεν γὰρ αὐτῶν λέγει τὴν ζωὴν ἐξ ἀρχῆς δὲ ὁ θεὸς".split()
+    texts = {"A": pre + "συναφανίζει τῶ σώματι".split() + far + post, "B": pre + "συναφανίζει τῶ σώματι".split() + far + post,
+             "C": pre + "συναφανίζει τῶ σώματι".split() + far + post, "Ca": pre + far + "συναφανίζει καὶ σῶματι".split() + post}
+    result, proj = _three_witnesses(texts)
+    m = build(result, proj)
+    assert not any(u["transposition"] for u in m.units) and len(m.auto_links) == 1
+
+
+def test_iota_adscriptum_is_orthographic():
+    from pta_collate.normalize import Profile, forms
+    p = Profile.from_dict(None)
+    assert forms("τῶι", p)[1:] == forms("τῷ", p)[1:] == forms("τῶ", p)[1:]
+    assert forms("αὐτῆι", p)[2] == forms("αὐτῇ", p)[2]
+    assert forms("καί", p)[2] != forms("κά", p)[2] and forms("λέγεσθαι", p)[2].endswith("θε")   # αι stays
+    texts = {"A": "ἐν τῷ σώματι καὶ τῇ ψυχῇ".split(), "B": "ἐν τῷ σώματι καὶ τῇ ψυχῇ".split(),
+             "C": "ἐν τῶι σώματι καὶ τῆι ψυχῆι".split()}
+    result, proj = _three_witnesses(texts)
+    m = build(result, proj)
+    for u in m.units:
+        if u["variant"]:
+            assert all(r["cause"] == "orthographic" for r in u["readings"] if "C" in r["wits"]), u["readings"]

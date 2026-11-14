@@ -40,7 +40,6 @@ transcriptions and the extraction settings do not change):
 
 from __future__ import annotations
 
-import copy
 from collections import Counter, OrderedDict
 
 from .normalize import Profile, forms, strip_punctuation
@@ -207,16 +206,42 @@ class Model:
                     return before, self.rows[j]["id"]
         return None
 
+    def _word_stats(self, permille: float):
+        """Frequency of every orthographic key in the collated text: occurrences per witness
+        text (average) and per thousand words. A key is *frequent* if it occurs at least twice
+        per text and at least ``permille`` times per thousand words: such words (articles,
+        particles, καί, but also the topic words of a text) turn up nearby by chance, so they
+        count as transposed only on stronger evidence. Everything is computed from the
+        collation itself, so it works for any language."""
+        from collections import Counter
+        cnt: Counter = Counter()
+        per_wit: Counter = Counter()
+        for t in self.tokens.values():
+            if t.get("o"):
+                cnt[t["o"]] += 1
+                per_wit[t["wit"]] += 1
+        nw = max(1, len(per_wit))
+        avg = max(1.0, sum(per_wit.values()) / nw)
+        self.word_count = {k: c / nw for k, c in cnt.items()}
+        self.frequent = {k for k, c in cnt.items() if c / nw >= 2 and 1000 * c / nw / avg >= permille}
+
+    def _weak(self, text: str) -> bool:
+        """Text that turns up nearby by chance: only frequent words (``_word_stats``), or
+        fewer than four letters in all (particles, articles, split-off syllables)."""
+        words = text.split()
+        return all(w in self.frequent for w in words) or len(text.replace(" ", "")) < 4
+
     def _split_displaced(self, window: int) -> int:
         """Words that the aligner put against a different word, although the other witnesses
         have the same word a few rows away (a short transposition: Ca "καὶ … ἔλαβεν" against
         Pk "ἔλαβε …"). Such a reading is moved into a row of its own, on the side where its
         counterpart is, so that addition and omission can be recognised as a transposition.
 
-        Conditions: the reading has at most three words and at least four letters, it does not
-        resemble any other reading of its row (similarity < 0.5), and within ``window`` rows of
-        the same section there is a row where its witnesses have no text while most of the
-        witnesses with text there have a similar reading (similarity ≥ 0.8)."""
+        Conditions: the reading has at most three words and is distinctive (``_weak``: not
+        only frequent words, at least four letters), it does not resemble any other reading of its row
+        (similarity < 0.5), and within ``window`` rows of the same section there is a row where
+        its witnesses have no text while most of the witnesses with text there have a similar
+        reading (similarity ≥ 0.8)."""
         tok = self.tokens
 
         def text(cell):
@@ -234,7 +259,7 @@ class Model:
             step = 1
             if len(groups) >= 2:
                 for tx, ws in groups.items():
-                    if len(tx.split()) > 3 or len(tx.replace(" ", "")) < 4:
+                    if len(tx.split()) > 3 or self._weak(tx):
                         continue
                     if any(_similar(tx, g, 0.5) for g in groups if g != tx):
                         continue
@@ -258,6 +283,7 @@ class Model:
         self.rows = [{"id": r["id"], "seg": r["seg"], "cells": {w: list(c) for w, c in r["cells"].items()}}
                      for r in self.result["rows"]]
         opts = self.proj.get("units", {})
+        self._word_stats(float(opts.get("frequent_word_permille", 5)))
         if opts.get("split_displaced", True):
             self._split_displaced(int(opts.get("transposition_window", 6)))
         self._index()
@@ -307,10 +333,25 @@ class Model:
         self.auto_transpositions = []
         if opts.get("detect_transpositions", True):
             self._detect_transpositions(boundary, inv, int(opts.get("transposition_window", 6)))
-        # long transpositions: each half becomes one unit (edits below can still change that)
+        # transposed word groups (``_find_long_transpositions``): within the window of short
+        # transpositions, X…Y becomes one unit whose readings are the two word orders (the same
+        # as for single words above); further apart, each half becomes one unit and the pair is
+        # suggested as a long transposition (edits below can still change that)
         long_pairs = []
-        if opts.get("detect_long_transpositions", True):
+        window = int(opts.get("transposition_window", 6))
+        if opts.get("detect_long_transpositions", True) or opts.get("detect_transpositions", True):
             for (a0, a1), (b0, b1) in self._find_long_transpositions(int(opts.get("long_transposition_distance", 150))):
+                if b0 - a1 - 1 <= window:
+                    if opts.get("detect_transpositions", True):
+                        boundary[a0] = True
+                        if b1 + 1 < n:
+                            boundary[b1 + 1] = True
+                        for i in range(a0 + 1, b1 + 1):
+                            boundary[i] = False
+                        self.auto_transpositions.append(a0)
+                    continue
+                if not opts.get("detect_long_transpositions", True):
+                    continue
                 for lo, hi in ((a0, a1), (b0, b1)):
                     boundary[lo] = True
                     if hi + 1 < n:
@@ -339,6 +380,7 @@ class Model:
             units.append(cur)
         self.units = [self._make_unit(idx, inv) for idx in units]
         self.by_key = {u["key"]: u for u in self.units}
+        self._unit_by_row = {rid: u for u in self.units for rid in u["rows"]}
         self._apply_inserts()
         self.auto_links = [(self._unit_of_row(a)["key"], self._unit_of_row(b)["key"]) for a, b in long_pairs]
         self.auto_links = [(a, b) for a, b in self.auto_links if a != b]
@@ -351,6 +393,11 @@ class Model:
         self._apply_unit_edits()
         for u in self.units:
             classify(u)
+            # a detected transposition in which no reading turns out to be transposed (e.g. a
+            # repeated phrase in a correction layer) is an ordinary unit
+            if u.get("_auto_transposition") and not any(r.get("type") == "transposition" for r in u["readings"]):
+                u["_auto_transposition"] = u["transposition"] = False
+                classify(u)
             assign_parents(u, self.tokens)
         self._absent_kinds()
 
@@ -467,8 +514,8 @@ class Model:
         For every witness W, runs of rows where W has words that most other witnesses lack
         ("extra") are compared with runs where W lacks words that most others have ("missing")
         within ``max_distance`` rows (also across sections). If W's words and the words of the
-        others agree (orthographic key, Dice ≥ 0.6, at least two words), the two runs are a
-        transposition. Works for every aligner, because it only looks at the alignment rows."""
+        others agree (orthographic key, Dice ≥ 0.6, at least two words in common, at least
+        one of them distinctive – ``_word_stats``), the two runs are a transposition. Works for every aligner, because it only looks at the alignment rows."""
         rows, n = self.rows, len(self.rows)
         tok = self.tokens
         row_words = [{w: [tok[t]["o"] for t in c if tok[t]["o"]] for w, c in r["cells"].items()} for r in rows]
@@ -509,10 +556,12 @@ class Model:
             return res
 
         def dice(a, b):
-            from collections import Counter
+            """(common words, of which distinctive ones, Dice coefficient)."""
             ca, cb = Counter(a), Counter(b)
-            common = sum((ca & cb).values())
-            return common, 2 * common / max(1, len(a) + len(b))
+            both = ca & cb
+            common = sum(both.values())
+            distinctive = sum(c for k, c in both.items() if k not in self.frequent)
+            return common, distinctive, 2 * common / max(1, len(a) + len(b))
 
         found: list[list[int]] = []
         for w in self.wits:
@@ -527,8 +576,9 @@ class Model:
                         continue  # adjacent or overlapping: a local variant, not a transposition
                     if min(abs(b0 - a1), abs(a0 - b1)) > max_distance:
                         continue
-                    common, d = dice(mine, majority(b0, b1, w))
-                    if common >= 2 and d >= 0.6 and (best is None or d > best[0]):
+                    common, distinctive, d = dice(mine, majority(b0, b1, w))
+                    # at least one of the shared words must be distinctive (not a frequent word)
+                    if common >= 2 and distinctive >= 1 and d >= 0.6 and (best is None or d > best[0]):
                         best = (d, b0, b1)
                 if best:
                     _, b0, b1 = best
@@ -563,11 +613,7 @@ class Model:
             ua["suggest"], ub["suggest"] = {"next": b}, {"prev": a}
 
     def _unit_of_row(self, row_index):
-        rid = self.rows[row_index]["id"]
-        for u in self.units:
-            if rid in u["rows"]:
-                return u
-        return None
+        return self._unit_by_row.get(self.rows[row_index]["id"])
 
     def _natural_units(self, boundary):
         units, cur = [], []
@@ -581,8 +627,25 @@ class Model:
         return units
 
     def _detect_transpositions(self, boundary, inv, window):
-        """Find X…Y where one group of witnesses has a text at X and another group has the
-        same text at Y (and nothing at the respective other place). Join X…Y into one unit."""
+        """Short transpositions: X…Y where one group of witnesses (A) has a text at X and
+        another group (B) has the same text at Y, and neither has it at the other place.
+        X…Y is joined into one unit, so that the two word orders become its readings.
+
+        Evidence required: A and B are disjoint, A has nothing at Y and B nothing at X
+        (witnesses with a lacuna at X or Y do not count against it); there is text between X
+        and Y (with nothing in between it is an alternative at the same place); and the texts
+        agree. How closely depends on the text (``_weak``):
+
+        * a distinctive text (a word of at least four letters that is not frequent in the
+          collated text, or several words not all of which are frequent) may differ in
+          spelling (orthographic keys, similarity ≥ 0.8); that A and B are small minorities
+          does not matter – the same distinctive word added at two places is one transposition
+          in the tradition rather than two coincidences;
+        * a weak text (a frequent word such as καί, an article, a particle, or anything
+          shorter than four letters) turns up nearby by chance, so it must be spelt identically
+          in both groups and must belong to the text at X or Y for most witnesses: A ∪ B covers
+          at least half of the witnesses that have any text in X…Y. Otherwise two minorities
+          that each add καί somewhere are two additions."""
         units = self._natural_units(boundary)
 
         def profile(idx):
@@ -601,24 +664,33 @@ class Model:
             seg_a, ta = profs[a]
             full_a = {w for w, t in ta.items() if t}
             empty_a = {w for w, t in ta.items() if not t}
-            if not full_a or not empty_a or len({ta[w] for w in full_a}) != 1:
+            if not full_a or not empty_a:
                 continue
-            text = ta[next(iter(full_a))]
+            # the group may write the text slightly differently (orthography, corrections)
+            text = Counter(ta[w] for w in full_a).most_common(1)[0][0]
+            if not all(_similar(ta[w], text, 0.8) for w in full_a):
+                continue
+            absent_a = set(self.wits) - set(ta)          # e.g. a lacuna of the witness here
+            weak = self._weak(text)
+            if weak and any(ta[w] != text for w in full_a):
+                continue
+            with_text = set(full_a)                      # witnesses that have text somewhere in X…Y
             between = 0
             for b in range(a + 1, len(units)):
                 seg_b, tb = profs[b]
                 if seg_b != seg_a:
                     break
                 full_b = {w for w, t in tb.items() if t}
+                with_text |= full_b
                 if all(inv[i] for i in units[b]):
                     between += len(units[b])
                     if between > window:
                         break
                     continue
-                # the other group has (nearly) the same text here and the first group has none;
-                # with no text in between, it is an alternative at the same place, not a transposition
-                if b > a + 1 and full_b and full_b <= empty_a and full_a <= {w for w, t in tb.items() if not t} \
-                        and all(_similar(tb[w], text, 0.8) for w in full_b):
+                if b > a + 1 and full_b and full_b <= empty_a | absent_a and not (full_a & full_b) \
+                        and full_a <= {w for w, t in tb.items() if not t} | (set(self.wits) - set(tb)) \
+                        and (all(tb[w] == text for w in full_b) and 2 * len(full_a | full_b) >= len(with_text)
+                             if weak else all(_similar(tb[w], text, 0.8) for w in full_b)):
                     for u in range(a + 1, b + 1):
                         boundary[units[u][0]] = False
                     self.auto_transpositions.append(units[a][0])
@@ -632,25 +704,30 @@ class Model:
         seg = rows[0]["seg"]
         present = self.row_present[idx[0]]
         cells = {}
+        tokens = self.tokens
         for w in present:
             tids = [t for r in rows for t in r["cells"].get(w, [])]
-            flags = sorted({f for t in tids for f in self.tokens[t].get("flags", [])})
-            pages = []
+            ts, cs, ns, os_, flags, pages, gaps = [], [], [], [], set(), [], []
             for t in tids:
-                p = self.tokens[t].get("page")
+                x = tokens[t]
+                if x["t"]:
+                    ts.append(x["t"])
+                if x["c"]:
+                    cs.append(x["c"])
+                if x["n"]:
+                    ns.append(x["n"])
+                if x["o"]:
+                    os_.append(x["o"])
+                f = x.get("flags")
+                if f:
+                    flags.update(f)
+                p = x.get("page")
                 if p and (not pages or pages[-1] != p):
                     pages.append(p)
-            toks = [self.tokens[t] for t in tids]
-            cells[w] = {
-                "tokens": tids,
-                "t": " ".join(x["t"] for x in toks if x["t"]),
-                "c": " ".join(x["c"] for x in toks if x["c"]),
-                "n": " ".join(x["n"] for x in toks if x["n"]),
-                "o": " ".join(x["o"] for x in toks if x["o"]),
-                "flags": flags,
-                "pages": pages,
-                "gap": [self.tokens[t]["gap"] for t in tids if self.tokens[t].get("gap")],
-            }
+                if x.get("gap"):
+                    gaps.append(x["gap"])
+            cells[w] = {"tokens": tids, "t": " ".join(ts), "c": " ".join(cs), "n": " ".join(ns),
+                        "o": " ".join(os_), "flags": sorted(flags), "pages": pages, "gap": gaps}
         key = next((r["cells"][w][0] for r in rows for w in self.wits if r["cells"].get(w)), rows[0]["id"])
         groups: "OrderedDict[str, list[str]]" = OrderedDict()
         for w in present:
@@ -661,7 +738,7 @@ class Model:
             gap_only = bool(first["tokens"]) and all(self.tokens[t].get("gap") and self.tokens[t]["t"].startswith("[")
                                                     for t in first["tokens"])
             readings.append({"id": f"r{i}", "c": c, "t": first["t"], "n": first["n"], "o": first["o"],
-                             "wits": ws, "gap": first["gap"][0] if gap_only else None,
+                             "wits": ws, "gap": first["gap"][0] if gap_only else None, "_n_tok": len(first["tokens"]),
                              "type": None, "cause": None, "group": None, "override": {}})
         grid = [{"id": r["id"], "cells": {w: list(c) for w, c in r["cells"].items()}} for r in rows]
         absent = [w for w in self.seg_wits[seg] if w not in present]
@@ -809,18 +886,22 @@ class Model:
             "segments": self.result["segments"],
             "segmentation": self.result["segmentation"],
             "seg_wits": self.seg_wits,
-            "units": [_unit_json(u) for u in self.units],
+            "units": self._units_json(),
             "tokens": self._tokens_json(),
             "edit_status": status,
             "stats": self.stats(),
         }
+
+    def _units_json(self) -> list[dict]:
+        last_pages: dict = {}
+        return [_unit_json(u, last_pages=last_pages) for u in self.units]
 
     def unit_detail(self, key: str) -> dict | None:
         """Full unit with its alignment rows and token texts (for the detail panel)."""
         u = self._unit(key)
         if u is None:
             return None
-        d = _unit_json(u)
+        d = _unit_json(u, full=True)
         for w, c in u["cells"].items():
             d["cells"][w]["tokens"] = c["tokens"]
         d["grid"] = u["grid"]
@@ -884,23 +965,45 @@ class Model:
         }
 
 
-def _unit_json(u: dict) -> dict:
-    """Compact form for the browser: no empty fields; invariant units without token lists."""
+def _unit_json(u: dict, full: bool = False, last_pages: dict | None = None) -> dict:
+    """Compact form for the browser (PTASynopsis.inflate restores the full form):
+
+    * a cell that reads like its reading (same t/c/o, same number of words) is left out; the
+      browser recreates it from the reading's witness list;
+    * pages are given only where they differ from the witness's pages in the previous unit
+      with text (``last_pages`` keeps them across the units of one model; a cell without text
+      is located on the same pages);
+    * the readings carry the texts; invariant units get one reading with the common text.
+
+    With ``full`` every cell is written out (detail panel: a single unit)."""
+    rid_of = {w: r["id"] for r in u["readings"] for w in r["wits"]}
+    rtext = {r["id"]: r for r in u["readings"]}
     cells = {}
     for w, c in u["cells"].items():
-        d = {"t": c["t"], "c": c["c"], "o": c["o"]}
+        r = rtext.get(rid_of.get(w))
+        n = len(c["tokens"])
+        same = r is not None and c["t"] == r["t"] and c["c"] == r["c"] and c["o"] == r["o"] and n == r.get("_n_tok", n)
+        d = {} if same and not full else {"t": c["t"], "c": c["c"], "o": c["o"], "n_tok": n}
         if c["flags"]:
             d["flags"] = c["flags"]
-        if c["pages"]:
-            d["pages"] = c["pages"]
         if "unclear" in c["flags"]:
             d["tokens"] = c["tokens"]
-        d["n_tok"] = len(c["tokens"])
-        cells[w] = d
+        # pages: only where they change; a cell without text keeps the witness's last pages
+        if full or last_pages is None:
+            d["pages"] = c["pages"]
+        elif c["tokens"] and last_pages.get(w) != c["pages"]:
+            d["pages"] = last_pages[w] = c["pages"]
+        if d or full:
+            cells[w] = d
     out = {k: u[k] for k in ("key", "seg", "variant", "transposition", "lem", "nest", "note", "link", "suggest", "absent", "absent_kind", "inserted") if u.get(k) not in (None, "", False) or k in ("key", "seg", "variant")}
     out["cells"] = cells
-    out["readings"] = [{k: v for k, v in r.items() if v not in (None, {}, "") or k in ("c", "t", "wits", "id")}
-                       for r in u["readings"]] if u["variant"] else [{"id": "r0", "c": u["readings"][0]["c"], "t": "", "wits": []}]
+    readings = []
+    for r in u["readings"]:
+        d = {k: v for k, v in r.items() if v not in (None, {}, "") or k in ("c", "t", "wits", "id")}
+        d.pop("_n_tok", None)
+        d["n_tok"] = r.get("_n_tok", 0)
+        readings.append(d)
+    out["readings"] = readings
     out["nrows"] = len(u["rows"])
     return out
 
@@ -974,6 +1077,25 @@ def classify(u: dict):
             if tuple(m["o"].split()) != tuple(head["o"].split()):
                 m["type"] = "transposition"
         u["transposition"] = True
+    # a unit joined as a transposition (detected or by hand): a reading that has mostly the
+    # same words as the main reading, but in another order, is the transposed one even if a
+    # word differs as well (καὶ τὴν ψυχὴν συναφανίζει καὶ σῶματι against συναφανίζει τῶ
+    # σώματι καὶ τὴν ψυχὴν); without the type it would count as a substitution
+    if u.get("transposition"):
+        head = lem if lem is not None and lem["n"] else max((r for r in rs if r["n"]), key=lambda r: len(r["wits"]), default=None)
+        if head is not None:
+            hw = head["o"].split()
+            for r in rs:
+                if r is head or not r["n"] or r.get("type") or r["o"] == head["o"]:
+                    continue
+                rw = r["o"].split()
+                common = Counter(hw) & Counter(rw)
+                if 2 * sum(common.values()) < 0.6 * (len(hw) + len(rw)):
+                    continue
+                order_h = [w for w in hw if w in common]
+                order_r = [w for w in rw if w in common]
+                if order_h != order_r:
+                    r["type"] = "transposition"
     # orthographic families
     fam: "OrderedDict[str, list]" = OrderedDict()
     for r in rs:
@@ -1015,7 +1137,8 @@ def assign_parents(u: dict, tokens: dict):
 
     Automatic proposal (``r["parent_auto"]``), overridable per reading (override "parent": text
     of the parent reading, or None for an own reading). Rules for the proposal:
-    a lemma, an omission of the whole unit, a transposition and a gap are own readings; the
+    a lemma, an omission of the whole unit and a gap are own readings, a transposition is at
+    most a sub-variant of another transposed reading (e.g. its orthographic variant); the
     other readings are tried from the most widely attested; a reading becomes a sub-variant of
     the closest own reading if it shares at least one word with it in unchanged rows, has no
     more added words and changed places than shared words, and has no word in a row of its
@@ -1030,7 +1153,7 @@ def assign_parents(u: dict, tokens: dict):
     oprof = {r["id"]: row_profile(u, r, tokens, "o") for r in rs}
 
     def fixed_root(r):
-        return r["id"] == u.get("lem") or not r["c"] or r.get("gap") or r.get("type") == "transposition"
+        return r["id"] == u.get("lem") or not r["c"] or r.get("gap")
 
     def diff(r, p):
         """(shared words, missing words, added words, changed rows) of r against p, or None."""
@@ -1063,6 +1186,9 @@ def assign_parents(u: dict, tokens: dict):
         best = None
         for p in roots:
             if not p["c"] or p.get("gap"):
+                continue
+            # a transposition is a sub-variant only of another reading with the same word order
+            if (r.get("type") == "transposition") != (p.get("type") == "transposition"):
                 continue
             d = diff(r, p)
             if d is None:

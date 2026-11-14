@@ -2,7 +2,7 @@
 
 Kollation von Handschriften-Transkriptionen des [Patristischen Textarchivs](https://pta.bbaw.de) mit lokaler Web-Oberfläche, farbiger Spaltensynopse, Variantengraph und TEI-Export zur Vorbereitung kritischer digitaler Editionen nach dem [PTA-Schema](https://github.com/PatristicTextArchive/Schema).
 
-Version 0.1.2 · Konzeption: [Annette von Stockhausen](https://orcid.org/0000-0001-5382-6322) · entwickelt für das [Patristische Textarchiv](https://pta.bbaw.de) im Akademienvorhaben [„Die alexandrinische und antiochenische Bibelexegese in der Spätantike“](https://bibelexegese.bbaw.de) der Berlin-Brandenburgischen Akademie der Wissenschaften.
+Version 0.1.3 · Konzeption: [Annette von Stockhausen](https://orcid.org/0000-0001-5382-6322) · entwickelt für das [Patristische Textarchiv](https://pta.bbaw.de) im Akademienvorhaben [„Die alexandrinische und antiochenische Bibelexegese in der Spätantike“](https://bibelexegese.bbaw.de) der Berlin-Brandenburgischen Akademie der Wissenschaften.
 
 Ausgangsbasis war der auf [CollateX](https://collatex.net) zurückgreifende [PTA-collator](https://github.com/PatristicTextArchive/collator), mit dem die Transkriptionen des PTA bisher kollationiert werden. Dessen CollateX-Build mit den Erweiterungen des Hallenser TSAligner-Projekts wird hier weiterverwendet.
 
@@ -132,7 +132,7 @@ Am besten werden die Fundstellen in der Transkription selbst korrigiert.
 Jedes Wort erhält drei abgeleitete Formen, die in der Vorschau sichtbar sind:
 
 - **Vergleichsform**: entscheidet, ob zwei Lesarten gleich sind. Standardmäßig ohne Interpunktion und ohne Unterschied von Groß- und Kleinschreibung. Ist „Interpunktion ignorieren“ ausgeschaltet, werden Satzzeichen mitkollationiert und Unterschiede darin zu Varianten.
-- **Normalisierte Form**: was der Aligner vergleicht, nach den gewählten Regeln (Akzente, Spiritus, Iota subscriptum, ς/σ, ν ephelkystikon, Elision, auf Wunsch Itazismus, eigene Regeln als reguläre Ausdrücke).
+- **Normalisierte Form**: was der Aligner vergleicht, nach den gewählten Regeln (Akzente, Spiritus, Iota subscriptum und adscriptum nach η/ω, ς/σ, ν ephelkystikon, Elision, auf Wunsch Itazismus, eigene Regeln als reguläre Ausdrücke).
 - **Orthographischer Schlüssel**: die normalisierte Form mit gleichgesetztem Itazismus und einfachen Doppelkonsonanten. Lesarten mit gleichem Schlüssel gelten als orthographische Varianten (`cause="orthographic"`, gemeinsames `rdgGrp`); reine Interpunktionsunterschiede werden gruppiert, aber nicht als orthographisch ausgewiesen.
 
 Voreinstellungen: *Standard*, *Diplomatisch* (nur Interpunktion) und *Weitgehend* (zusätzlich Itazismus beim Ausrichten gleichsetzen).
@@ -200,7 +200,7 @@ Eine Lesart, die eine andere Lesart derselben Stelle mit einzelnen ausgelassenen
 Im Variantengraphen stehen die Untervarianten (↳) direkt unter ihrer Lesart, gemeinsam gestrichelt umrahmt; der Tooltip nennt die Abweichung. Die Unterordnung wird automatisch vorgeschlagen und im Detailfenster unter *Untervariante von* angezeigt (gestrichelt, solange sie nicht bestätigt ist). *Erkennung übernehmen* legt sie zusammen mit Typ und Ursache fest; jede Lesart lässt sich auch einzeln einer anderen zuordnen oder wieder zur eigenen Lesart machen.
 
 Regeln für den Vorschlag:
-- Eigene Lesarten bleiben das Lemma, die Auslassung der ganzen Stelle, Umstellungen und Lücken.
+- Eigene Lesarten bleiben das Lemma, die Auslassung der ganzen Stelle und Lücken. Eine Umstellung wird höchstens einer anderen Lesart mit derselben Wortfolge untergeordnet (etwa als deren orthographische Variante).
 - Eine Lesart wird der nächstliegenden eigenen Lesart untergeordnet, wenn sie mindestens ein Wort unverändert mit ihr teilt und nicht mehr zusätzliche Wörter und geänderte Stellen als gemeinsame Wörter hat.
 - Ausgelassene Wörter zählen nicht dagegen. Fehlen mehr als drei, erscheint ein Warnhinweis (⚠).
 - Hat eine Lesart ein zusätzliches Wort, das die übergeordnete Lesart an anderer Stelle hat, gilt sie als Umstellung, nicht als Untervariante.
@@ -258,7 +258,16 @@ Die Kollation folgt dem Gothenburg-Modell (Tokenisierung, Normalisierung, Ausric
 3. **Globale Ausrichtung zwischen den Inseln** nach Needleman und Wunsch [3] mit affinen Lückenkosten nach Gotoh [4]: Eine Lücke zu eröffnen kostet −1,2, sie zu verlängern −0,3. Eine ausgelassene Wortgruppe bleibt dadurch zusammen. Gleiche Wörter zählen +2, verschiedene −1,5.
 4. **Unscharfer Wortvergleich.** Zwei verschiedene Formen gelten als Übereinstimmung, wenn ihre normalisierte Levenshtein-Ähnlichkeit [5] (1 − Editierabstand / Länge des längeren Wortes) die Schwelle erreicht (Standard 0,6). Sie zählen dann 2 × Ähnlichkeit − 0,4. Dieselbe Idee verfolgen die Vergleicher des Halle-TSAligners für CollateX.
 
-Weite Umstellungen werden nicht beim Ausrichten, sondern danach im Kollationsmodell erkannt (`pta_collate/units.py`), für beide Aligner gleich. Für jeden Zeugen werden Läufe von Wörtern, die die meisten anderen nicht haben, mit Läufen fehlender Wörter in bis zu 150 Wörtern Abstand verglichen. Bei hinreichender Übereinstimmung (Dice-Koeffizient ≥ 0,6 auf den orthographischen Schlüsseln, mindestens zwei Wörter) entsteht ein Vorschlag.
+Weite Umstellungen werden nicht beim Ausrichten, sondern danach im Kollationsmodell erkannt (`pta_collate/units.py`), für beide Aligner gleich. Für jeden Zeugen werden Läufe von Wörtern, die die meisten anderen nicht haben, mit Läufen fehlender Wörter in bis zu 150 Wörtern Abstand verglichen. Bei hinreichender Übereinstimmung (Dice-Koeffizient ≥ 0,6 auf den orthographischen Schlüsseln, mindestens zwei gemeinsame Wörter, davon mindestens ein ausgeprägtes) entsteht ein Vorschlag.
+
+Liegen die beiden Läufe höchstens so weit auseinander wie unter *Umstellungen erkennen* eingestellt, entsteht kein Vorschlag, sondern X…Y wird zu einer Stelle, deren Lesarten die beiden Wortfolgen sind („συναφανίζει τῶ σώματι καὶ τὴν ψυχὴν“ gegen Ca „καὶ τὴν ψυχὴν συναφανίζει καὶ σῶματι“); die umgestellte Lesart erhält `type="transposition"`, auch wenn in ihr ein Wort abweicht. Erweist sich in einer so erkannten Stelle keine Lesart als umgestellt, bleibt sie eine gewöhnliche Stelle.
+
+**Kurze Umstellungen** einzelner Wörter (innerhalb desselben Abstands) werden erkannt, wenn eine Zeugengruppe A einen Text an der Stelle X hat und eine andere Gruppe B denselben Text an der Stelle Y, keine der beiden an der jeweils anderen Stelle, und Text dazwischen liegt. Zeugen mit einer Lücke an X oder Y stören nicht. Wie genau die Texte übereinstimmen müssen, hängt davon ab, wie ausgeprägt der Text ist:
+
+- Ein **ausgeprägter Text** (ein nicht häufiges Wort mit mindestens vier Buchstaben, oder mehrere Wörter, die nicht alle häufig sind) darf orthographisch abweichen (Ähnlichkeit der Schlüssel ≥ 80 %, etwa ἔκστασιν/ἔκστασην); A und B dürfen kleine Minderheiten sein, denn dasselbe ausgeprägte Wort an zwei Stellen ist eher eine Umstellung in der Überlieferung als zweimal Zufall (πάλιν λαβεῖν αὐτήν / λαβεῖν αὐτήν πάλιν).
+- Ein **schwacher Text** (nur häufige Wörter wie καί, Artikel, Partikeln, oder weniger als vier Buchstaben) taucht in der Nähe auch zufällig auf. Er gilt nur als umgestellt, wenn beide Gruppen ihn gleich schreiben und er an einer der beiden Stellen bei der Mehrheit der Zeugen steht (A ∪ B mindestens die Hälfte der Zeugen mit Text in X…Y). Fügen zwei Minderheiten je ein καί an verschiedenen Stellen ein, sind das zwei Zusätze.
+
+Welche Wörter **häufig** sind, wird aus der Kollation selbst bestimmt und gilt daher für jede Sprache: ein Wort (orthographischer Schlüssel), das im Durchschnitt mindestens zweimal je Zeugentext und mindestens so oft je 1000 Wörter vorkommt, wie in der Vorbereitung unter *Häufige Wörter* eingestellt (Standard 5 ‰). In einer Homilie über Gen 2 sind das neben Artikeln und Partikeln etwa ἀδάμ, θεός, πνεῦμα und ψυχή. Dieselbe Unterscheidung gilt für das Abtrennen verschobener Wörter und für weite Umstellungen.
 
 **Literatur**
 

@@ -656,9 +656,40 @@
     return api;
   }
 
+  /* The server sends units compactly (units._unit_json): cells that read like their reading
+     are left out, pages only where they change. Restore the full cells in witness order, so
+     that the rest of the code sees cell.t/.c/.o/.n_tok/.pages everywhere. Idempotent. */
+  function inflateUnit(u, order, last) {
+    if (!u || !u.readings) return u;
+    const given = u.cells || {}, byId = {}, rOf = {};
+    for (const r of u.readings) { byId[r.id] = r; for (const w of r.wits || []) rOf[w] = r; }
+    const ids = order || Object.keys(given);
+    const cells = {};
+    for (const w of ids) {
+      if (!(w in given) && !(w in rOf)) continue;
+      const c = given[w] || {};
+      const r = rOf[w] || byId[c.r];
+      if (!("t" in c) && r) { c.t = r.t; c.c = r.c; c.o = r.o; c.n_tok = r.n_tok || 0; }
+      delete c.r;
+      if (last) { if ("pages" in c) last[w] = c.pages; else c.pages = last[w] || []; }
+      else if (!("pages" in c)) c.pages = [];
+      cells[w] = c;
+    }
+    u.cells = cells;
+    return u;
+  }
+  function inflate(data) {
+    if (data && Array.isArray(data.units)) {
+      const order = (data.witnesses || []).map(w => w.id), last = {};
+      for (const u of data.units) inflateUnit(u, order, last);
+    } else inflateUnit(data);
+    return data;
+  }
+
   window.PTASynopsis = {
+    inflate, inflateUnit,
     create, columns, baseReading, cellClass, CLASSES,
-    mountStandalone(root, data) { installTips(document); return create(root, data, { readonly: true }); },
+    mountStandalone(root, data) { installTips(document); return create(root, inflate(data), { readonly: true }); },
     tip, installTips,
   };
 })();

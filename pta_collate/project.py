@@ -28,7 +28,7 @@ DEFAULTS = {
     "normalization": dict(PRESETS["standard"], preset="standard"),
     "aligner": {"engine": "builtin", "threshold": 0.6, "algorithm": "dekker",
                 "comparator": "equality", "distance": 0.6},
-    "units": {"merge_adjacent": True, "detect_transpositions": True, "transposition_window": 6, "split_displaced": True,
+    "units": {"merge_adjacent": True, "detect_transpositions": True, "transposition_window": 6, "frequent_word_permille": 5, "split_displaced": True,
               "detect_long_transpositions": True, "long_transposition_distance": 150,
               "lacuna_min": 40},
     "synopsis": {"base": "majority"},
