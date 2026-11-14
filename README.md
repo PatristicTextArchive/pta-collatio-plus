@@ -2,7 +2,7 @@
 
 Kollation von Handschriften-Transkriptionen des [Patristischen Textarchivs](https://pta.bbaw.de) mit lokaler Web-Oberfläche, farbiger Spaltensynopse, Variantengraph und TEI-Export zur Vorbereitung kritischer digitaler Editionen nach dem [PTA-Schema](https://github.com/PatristicTextArchive/Schema).
 
-Version 0.1.1 · Konzeption: [Annette von Stockhausen](https://orcid.org/0000-0001-5382-6322) · entwickelt für das [Patristische Textarchiv](https://pta.bbaw.de) im Akademienvorhaben [„Die alexandrinische und antiochenische Bibelexegese in der Spätantike“](https://bibelexegese.bbaw.de) der Berlin-Brandenburgischen Akademie der Wissenschaften.
+Version 0.1.2 · Konzeption: [Annette von Stockhausen](https://orcid.org/0000-0001-5382-6322) · entwickelt für das [Patristische Textarchiv](https://pta.bbaw.de) im Akademienvorhaben [„Die alexandrinische und antiochenische Bibelexegese in der Spätantike“](https://bibelexegese.bbaw.de) der Berlin-Brandenburgischen Akademie der Wissenschaften.
 
 Ausgangsbasis war der auf [CollateX](https://collatex.net) zurückgreifende [PTA-collator](https://github.com/PatristicTextArchive/collator), mit dem die Transkriptionen des PTA bisher kollationiert werden. Dessen CollateX-Build mit den Erweiterungen des Hallenser TSAligner-Projekts wird hier weiterverwendet.
 
@@ -101,7 +101,7 @@ Grundlage sind die [Transkriptionsregeln des PTA](https://pta.bbaw.de/de/project
 | Element | Behandlung bei der Kollation |
 | --- | --- |
 | `lb`, `cb`, `pb`, `gb` | Wortgrenze; mit `@break="no"` Teil desselben Wortes (Leerraum davor und danach entfällt). `pb/@n` wird als Seite mitgeführt |
-| `hi rend="initial"`, `"ekthesis"` | Buchstabe gehört zum folgenden Wort, auch verschachtelt in `rubricated`; Formatierungs-Zeilenumbrüche in und nach dem Element sind keine Wortgrenze, ein echtes Leerzeichen schon (`<hi rend="ekthesis">ὁ</hi> λόγος`) |
+| `hi rend="initial"`, `"ekthesis"` | Buchstabe gehört zum folgenden Wort, auch verschachtelt in `rubricated`; Formatierungs-Zeilenumbrüche in und nach dem Element sind keine Wortgrenze, ein echtes Leerzeichen schon (`<hi rend="ekthesis">ὁ</hi> λόγος`). Folgt auf den Zeilenumbruch ein `<choice>` (Nomen sacrum, Abkürzung), ist er eine Wortgrenze: `<hi rend="initial">ὁ</hi>` + Umbruch + `<choice><expan>σωτὴρ</expan>…` ergibt „ὁ σωτὴρ“ |
 | übrige `hi` (`rubricated`, `overline`, `majuscule`, …) | durchlässig, Text wird übernommen |
 | `g` (`diple`, `doubled_diple`, `paragraphos`, `obelos`, …) | kein Text; das Zeichen wird am folgenden Wort vermerkt und in der Synopse dezent gezeigt (› » ⸏ ÷) |
 | `subst`, `del`, `add`, `retrace` | Korrekturschichten: *ante correctionem* mit `del`, *post correctionem* mit `add`. Im TEI erscheint die Lesart nach der Korrektur (`varSeq="2"`) mit dem Markup der Transkription (`subst`, `add/@place`, `del/@rend`, `@hand`) |
@@ -123,7 +123,7 @@ Vor der Kollation (Schritt 1, „Transkriptionen prüfen“) meldet das Werkzeug
 | Zusammengeschriebene Wörter, fehlender Wortzwischenraum | Das Wort wird samt Nachbarwörtern an derselben Stelle mit den anderen Handschriften verglichen. Haben sie dort zwei oder drei Wörter, die zusammen dieses Wort ergeben (`σωτῆροςἑρμηνεία`, `πατρὶκαὶ`, `τῶμὲν`, `καὶτὸνθεὸν`), wird es gemeldet, sofern mehr Handschriften trennen als ebenso zusammenschreiben und entweder mindestens ein Viertel der übrigen Handschriften trennt oder das Wort ein Indiz trägt: zwei Akzente, Spiritus im Wortinneren, Interpunktion zwischen Buchstaben. Jeder Teil wird für sich normalisiert (ν ephelkystikon); der vom Nachbarwort entferntere Teil darf leicht abweichen (Tippfehler, Orthographie). So werden auch Fälle erkannt, in denen das zusammengeschriebene Wort zugleich ein echtes Wort ist (`ἐπεὶτὰ` neben `ἔπειτα`) | trennen |
 | Lateinische Buchstaben in griechischen Wörtern | z. B. lateinisches K statt Κ | wird beim Vergleich immer gleichgesetzt |
 
-Zu jedem Befund steht die Zeile in der XML-Datei. Bei zusammengeschriebenen Wörtern und lateinischen Buchstaben wird das Wort auf seiner Seite (vom `<pb/>` bis zum nächsten) gesucht, auch über Tags wie `<lb break="no"/>` hinweg; kommt es dort mehrmals vor, stehen alle Zeilen da. Ist es so nicht zu finden, etwa bei aufgelösten Nomina sacra, bleibt das Feld leer.
+Zu jedem Befund steht die Zeile in der XML-Datei, in der das Wort beginnt (bei einem Nomen sacrum die Zeile des `<expan>`); die Zeilen werden beim Lesen der Transkription mitgeführt. Steht dasselbe Wort auf einer Seite mehrmals, stehen alle Zeilen da.
 
 Am besten werden die Fundstellen in der Transkription selbst korrigiert.
 

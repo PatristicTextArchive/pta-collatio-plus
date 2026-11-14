@@ -1,5 +1,11 @@
 # Änderungen
 
+## 0.1.2 – 2026-11-14
+
+- Prüfung der Transkriptionen: Die Zeilennummern werden jetzt beim Lesen der Transkription mitgeführt (Zeile, in der das Wort beginnt) statt nachträglich im Dateitext gesucht. Bisher konnten bei zusammengeschriebenen Wörtern Zeilen angezeigt werden, an denen das Wort korrekt mit Leerzeichen steht.
+- Initiale bzw. Ekthesis (`hi rend="initial"`), auf die nach einem Zeilenumbruch ein `<choice>` folgt, wird nicht mehr mit dem Nomen sacrum zu einem Wort verbunden (bisher z. B. „ὁσωτὴρ“, das dann als zusammengeschriebenes Wort gemeldet wurde).
+- Varianzübersicht auf die überarbeitete Fassung der Arbeitsfassung aktualisiert (u. a. Überblick, Abweichungsdichte, nächster Zeuge).
+
 ## 0.1.1 – 2026-11-03
 
 - Prüfung der Transkriptionen: Zeilennummer in der XML-Datei jetzt auch bei zusammengeschriebenen Wörtern und lateinischen Buchstaben (bei mehrfachem Vorkommen auf der Seite alle Zeilen).

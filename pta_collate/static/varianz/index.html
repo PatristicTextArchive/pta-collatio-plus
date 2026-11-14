@@ -122,7 +122,7 @@ header.work .msg { grid-column: 1 / -1; }
 .tick { font-size: 10px; fill: var(--faint) !important; font-family: var(--f-mono) !important; }
 .grid { stroke: var(--rule); stroke-width: 1; }
 .grid.faint { stroke: var(--rule-2); stroke-dasharray: 2 3; }
-.hatch-bg { fill: var(--surface); } .hatch-ln { stroke: var(--hatch); stroke-width: 1.3; }
+.hatch-bg { fill: var(--surface); } .hatch-ln { stroke: var(--hatch); stroke-width: 1.3; } .nv-dot { fill: var(--hatch); }
 rect.k-lem, path.k-lem { fill: var(--c-lem); }
 .mark { cursor: pointer; }
 .k-subst { fill: var(--c-subst); } .k-add { fill: var(--c-add); } .k-transp { fill: var(--c-transp); } .k-om { fill: var(--c-om); }
@@ -303,6 +303,12 @@ ul.conf { margin: 4px 0 8px; padding-left: 18px; font-size: var(--fs-s); } ul.co
 .acpc-lines { font-size: var(--fs-s); color: var(--muted); margin-top: 2px; }
 .inner-sum { font-size: var(--fs-s); color: var(--muted); margin-top: 2px; } .inner-sum .mono { font-size: var(--fs-xs); }
 #chart text.esup { font-size: 9.5px; fill: var(--muted); }
+#chart .ovw-bg { fill: var(--c-lem); opacity: .5; } #chart .ovw-bar { fill: var(--c-seq); opacity: .75; }
+#chart .brush .selection { fill: var(--rubric); fill-opacity: .12; stroke: var(--rubric); stroke-width: 1; }
+#chart .link-t { fill: var(--rubric); text-decoration: underline; cursor: pointer; }
+#chart .dlift { stroke: var(--faint); stroke-dasharray: 1.5 3; } #chart .dlift-dot { fill: var(--faint); }
+#chart .sec-rule-top { stroke: var(--muted); } #chart text.sec-top { font-weight: 600; fill: var(--muted); }
+#chart .cell { cursor: pointer; }
 #chart text.slab-g, #chart text.slab-n, #chart text.esup, #chart text.slab-w { paint-order: stroke; stroke: var(--surface); stroke-width: 4px; stroke-linejoin: round; }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
 
@@ -371,7 +377,9 @@ details.cf-places ul { margin: 2px 0; padding-left: 14px; } details.cf-places li
       <span class="opt" id="color-wrap">Farben
         <span class="seg"><button type="button" data-set="color" data-v="typ">nach Typ</button><button type="button" data-set="color" data-v="skizze">grau/schwarz</button></span></span>
       <span class="opt" id="agg-wrap">Auflösung
-        <span class="seg"><button type="button" data-set="agg" data-v="stelle">Einzelstellen</button><button type="button" data-set="agg" data-v="abschnitt">Abschnitte</button></span></span>
+        <span class="seg"><button type="button" data-set="agg" data-v="stelle">Einzelstellen</button><button type="button" data-set="agg" data-v="abschnitt">Abschnitte</button><button type="button" data-set="agg" data-v="fenster">Fenster</button></span></span>
+      <span class="opt" id="aggval-wrap" hidden>Wert
+        <span class="seg"><button type="button" data-set="aggVal" data-v="dichte">Abweichungsdichte</button><button type="button" data-set="aggVal" data-v="naehe">nächster Zeuge</button></span></span>
       <span class="opt" id="order-wrap">Reihenfolge
         <span class="seg"><button type="button" data-set="order" data-v="gruppe">nach Gruppen</button><button type="button" data-set="order" data-v="varianz">nach Varianz</button><button type="button" data-set="order" data-v="alter">nach Alter</button></span></span>
       <span class="opt syn-ctl" id="stemma-wrap" hidden>
@@ -401,7 +409,7 @@ details.cf-places ul { margin: 2px 0; padding-left: 14px; } details.cf-places li
         <label class="opt"><input type="checkbox" id="collapse" checked> gemeinsamen Text kürzen</label>
       </span>
       <span class="opt" id="sankey-wrap" hidden>
-        <label class="opt">Spalten <select id="sankey-col"><option value="abschnitt">Abschnitte</option><option value="20">je 20 Stellen</option><option value="40">je 40 Stellen</option></select></label>
+        <label class="opt">Spalten <select id="sankey-col"><option value="auto">automatisch</option><option value="abschnitt">Abschnitte</option><option value="20">je 20 Stellen</option><option value="40">je 40 Stellen</option></select></label>
         <label class="opt">Gruppieren ab <input type="range" id="sankey-thr" min="0.6" max="0.95" step="0.05" value="0.8"> <span id="sankey-thr-v" class="mono">80 %</span></label>
       </span>
       <span class="opt" id="upset-wrap" hidden>
@@ -582,6 +590,13 @@ details.cf-places ul { margin: 2px 0; padding-left: 14px; } details.cf-places li
     opts = opts || {};
     const DP = DOMParserImpl || root.DOMParser;
     const doc = new DP().parseFromString(xmlString, 'application/xml');
+    // Nicht wohlgeformtes XML: Browser liefern statt einer Ausnahme ein Dokument mit <parsererror>,
+    // das nur den Text bis zur Fehlerstelle enthält. Dann die Meldung des Parsers weitergeben.
+    const perr = doc.getElementsByTagName('parsererror')[0];
+    if (perr) {
+      const msg = clean(perr.textContent || '').replace(/^This page contains the following errors:\s*/i, '').replace(/\s*Below is a rendering of the page up to the first error\.?\s*$/i, '');
+      const e = new Error(msg || 'parser error'); e.xml = true; throw e;
+    }
     const witnesses = readWitnesses(doc);
     const declared = new Set(witnesses.map((w) => w.id));
     const editions = readEditions(doc);
@@ -603,7 +618,11 @@ details.cf-places ul { margin: 2px 0; padding-left: 14px; } details.cf-places li
     const titleEl = doc.getElementsByTagNameNS(TEI, 'title')[0];
     const authorEl = doc.getElementsByTagNameNS(TEI, 'author')[0];
     const edition = Array.from(doc.getElementsByTagNameNS(TEI, 'div')).find((d) => attr(d, 'type') === 'edition');
-    if (!edition) throw new Error('Kein <div type="edition"> gefunden.');
+    if (!edition) {
+      const anyDiv = Array.from(doc.getElementsByTagName('*')).find((d) => ln(d) === 'div' && attr(d, 'type') === 'edition');
+      if (anyDiv) throw new Error('<div type="edition"> steht nicht im TEI-Namensraum (xmlns="' + TEI + '" fehlt oder ist abweichend: "' + (anyDiv.namespaceURI || '') + '").');
+      throw new Error('Kein <div type="edition"> gefunden.');
+    }
 
     const sections = [];
     const units = [];
@@ -650,6 +669,7 @@ details.cf-places ul { margin: 2px 0; padding-left: 14px; } details.cf-places li
     for (const w of witnesses) active[w.id] = !startsSeen.has(baseOf(w.id));
 
     const elUnit = new Map();
+    const tpPath = [], secNames = new Set();
     function openSection(n, label, el) {
       sec = { n, label, start: pos, words: 0, units: 0 };
       Object.defineProperty(sec, 'el', { value: el, enumerable: false });
@@ -874,9 +894,22 @@ details.cf-places ul { margin: 2px 0; padding-left: 14px; } details.cf-places li
           continue;
         }
         if (nm === 'div' && attr(c, 'type') === 'textpart') {
-          const n0 = attr(c, 'n');
+          // Abschnitte hierarchisch benennen (Buch.Kapitel.Vers), sonst fallen gleichnamige Unterabschnitte
+          // verschiedener Kapitel (z. B. mehrfaches n="vers_1") zusammen
+          tpPath.push(attr(c, 'n') || String(sections.length));
+          let n0 = tpPath.join('.');
+          if (secNames.has(n0)) { let k = 2; while (secNames.has(n0 + '#' + k)) k++; n0 += '#' + k; }
+          secNames.add(n0);
+          const outer = sec;
           openSection(n0, '§ ' + n0, c);
           walk(c, null, isText);
+          tpPath.pop();
+          // Text nach einem verschachtelten Unterabschnitt gehört wieder zum umgebenden Abschnitt
+          if (tpPath.length && outer && sections[sections.length - 1] !== outer) {
+            const cont = tpPath.join('.');
+            let n1 = cont, k = 2; while (secNames.has(n1)) n1 = cont + '#' + k++;
+            secNames.add(n1); openSection(n1, '§ ' + cont, outer.el);
+          }
           continue;
         }
         walk(c, parentUnit, isText);
@@ -885,6 +918,8 @@ details.cf-places ul { margin: 2px 0; padding-left: 14px; } details.cf-places li
 
     walk(edition, null, true);
     const totalWords = pos;
+    // leere Hüllabschnitte (nur Unterabschnitte, kein eigener Text) entfernen
+    for (let i = sections.length - 1; i >= 0; i--) if (!sections[i].words && !sections[i].units && sections.length > 1) sections.splice(i, 1);
 
     // überlappende Auslassungen als eigene Einheiten
     for (const p of pending) {
@@ -1031,7 +1066,21 @@ details.cf-places ul { margin: 2px 0; padding-left: 14px; } details.cf-places li
     '{n} Variationseinheiten ohne <lem>. In einer veröffentlichten Edition muss jede <app> ein <lem> haben; zum Arbeiten mit unfertigen Dateien die Arbeitsfassung verwenden.': '{n} variation units without <lem>. In a published edition every <app> needs a <lem>; use the working version for unfinished files.',
     'Im Apparat zitiert, aber nicht in der Zeugenliste': 'Cited in the apparatus but not in the list of witnesses',
     '{f} ließ sich nicht auswerten: {m} Erwartet wird eine PTA-TEI-Datei mit <app>-Apparat.': '{f} could not be read: {m} A PTA TEI file with an <app> apparatus is expected.',
+    'gepunktet: Zeuge im Apparat nicht verzeichnet': 'dotted: witness not recorded in the apparatus', 'von {n} Stellen': 'of {n} places',
+    'automatisch': 'automatic',
+    'an Stellen mit geteilten Varianten': 'at places with shared variants',
+    'Farbe im Feld: der Zeuge, mit dem dieser Zeuge dort am häufigsten übereinstimmt, gezählt an Stellen mit geteilten Varianten (mind. 3)': 'Colour of a cell: the witness this witness agrees with most often there, counted at places with shared variants (at least 3)',
+    'Fenster': 'Windows', 'Wert': 'Value', 'Abweichungsdichte': 'deviation density', 'nächster Zeuge': 'closest witness', 'Überblick': 'Overview', 'ganzer Text': 'whole text',
+    'Ausschnitt: Wort {a}–{b} von {n} ({s})': 'Detail: word {a}–{b} of {n} ({s})',
+    'Im Überblick einen Bereich aufziehen, um ihn zu vergrößern.': 'Drag across the overview to zoom into a range.',
+    'Klicken zum Vergrößern': 'Click to zoom in',
+    'stimmt am meisten überein mit': 'agrees most with',
+    'Fenster zu {n} Wörtern': 'windows of {n} words',
+    'Farbe im Feld: der Zeuge, mit dem dieser Zeuge im Feld am häufigsten übereinstimmt (mind. 3 gemeinsame Stellen)': 'Colour of a cell: the witness this witness agrees with most often there (at least 3 shared places)',
+    'Nähe im Textverlauf: je Zeuge und Feld der Zeuge, mit dem er dort am häufigsten übereinstimmt. Ein Farbwechsel innerhalb einer Zeile deutet auf Vorlagenwechsel oder Kontamination.': 'Closeness along the text: for each witness and cell the witness it agrees with most often there. A change of colour within a row points to a change of exemplar or contamination.',
+    'Raster nach gleich großen Fenstern: Dichte der Abweichungen je Zeuge und Fenster.': 'Grid by equal windows: density of deviations per witness and window.',
     'Kein <div type="edition"> gefunden.': 'No <div type="edition"> found.',
+    '{f} ist kein wohlgeformtes XML. Meldung des Parsers: {m}': '{f} is not well-formed XML. Parser message: {m}',
     'Laden fehlgeschlagen ({m}) für {u}. Prüfen Sie Adresse oder PTA-ID. Wird die Seite direkt von der Festplatte geöffnet, blockieren manche Browser Abrufe aus dem Netz; dann die Datei herunterladen und über „Datei wählen“ öffnen.': 'Loading failed ({m}) for {u}. Check the address or PTA ID. When the page is opened directly from disk, some browsers block network requests; then download the file and open it with “Choose file”.',
     // statische Texte der Seite
     'Patristic Text Archive · Varianz im Überblick': 'Patristic Text Archive · Variance at a glance', 'Patristic Text Archive · Varianz · Arbeitsfassung': 'Patristic Text Archive · Variance · working version',
@@ -1062,6 +1111,8 @@ details.cf-places ul { margin: 2px 0; padding-left: 14px; } details.cf-places li
     '{n} mit Umstellung ausgenommen': '{n} with transposition left out', '{n} Variationsformeln angenommen': '{n} variation formulas accepted', 'mind. {m} Belege': 'at least {m} instances',
     'Unverträgliche Formeln': 'Incompatible formulas', 'Belege': 'Instances', 'Hinweis auf Kontamination oder Parallelentwicklung': 'hint at contamination or parallel development', '{n} weitere Formeln mit zu wenigen Belegen': '{n} further formulas with too few instances',
     'Ausgerichtet: Wurzel wie gewählt.': 'Rooted as chosen.', 'Ungerichtet: Die Darstellung beginnt beim mittleren Knoten; das ist keine Aussage über den Archetyp. Unter „Wurzel“ lässt sich der Baum ausrichten.': 'Unrooted: the drawing starts at the central node; this says nothing about the archetype. Use “Root” to orient the tree.',
+    'Aus Typ-2-Variationen, ausgerichtet an der gewählten Wurzel; Zahl an der Kante: Variationen, die diese Teilung stützen. Knoten sind hypothetische Zwischenstufen.': 'From type-2 variations, oriented at the chosen root; number at an edge: variations supporting this split. Nodes are hypothetical intermediaries.',
+    'Ein Zeuge über jüngeren Nachkommen steht oben; gepunktet zu seiner Datierung.': 'A witness above younger descendants is drawn on top; dotted to its date.',
     'Ungerichteter Baum aus Typ-2-Variationen; Zahl an der Kante: Variationen, die diese Teilung stützen. Knoten sind hypothetische Zwischenstufen.': 'Unrooted tree from type-2 variations; number at an edge: variations supporting this split. Nodes are hypothetical intermediaries.',
     '{n} Typ-2-Variationen stützen die Kante': '{n} type-2 variations support this edge',
     'Stemma': 'Stemma', 'Gruppen aus': 'Groups from', 'Abweichungen vom Lemma': 'deviations from the lemma', 'allen gemeinsamen Lesarten': 'all shared readings', 'laut Zeugenliste': 'from the list of witnesses', 'Vorschlag aus Lesarten': 'proposal from readings', 'Dendrogramm': 'Dendrogram', 'mind. gemeinsame Lesarten': 'min. shared readings', 'Zeugen mit mind.': 'witnesses with at least', 'Text': 'text', 'jeder Umfang': 'any extent',
@@ -1139,8 +1190,8 @@ details.cf-places ul { margin: 2px 0; padding-left: 14px; } details.cf-places li
   let R = null; // DOM-Referenzen
   const S = {
     wits: new Set(), showOrth: false, kinds: new Set(KINDS.map((k) => k.k)),
-    color: 'typ', agg: 'stelle', order: 'gruppe', view: 'raster',
-    sel: null, combo: null, query: new Set(), upsetLem: false, upsetMin: 1, upsetTop: 40, sankeyCol: 'abschnitt', sankeyThr: 0.8, sankeySel: null, ref: 'lemma', leit: null, groupLevel: 'top', hands: 'first', showConj: false, conjShow: new Set(['text', 'app', 'corr']), passage: null, collapse: true, scrollToSel: false, stemmaMode: 'header', stemmaTime: true, cladMin: 1, cladNoTransp: true, cladFreq: true, cladVowel: false, cladOff: new Set(), cladRoot: '', stemmaBase: 'lemma', stemmaMin: 3, stemmaCov: 0.5, stemmaSel: null, panelOff: { synopse: true }, syn: [], synSec: '*', synOnlyVar: false, synCompact: false, synMode: 'spalten', workMode: false,
+    color: 'typ', agg: 'stelle', aggVal: 'dichte', range: null, order: 'gruppe', view: 'raster',
+    sel: null, combo: null, query: new Set(), upsetLem: false, upsetMin: 1, upsetTop: 40, sankeyCol: 'auto', sankeyThr: 0.8, sankeySel: null, ref: 'lemma', leit: null, groupLevel: 'top', hands: 'first', showConj: false, conjShow: new Set(['text', 'app', 'corr']), passage: null, collapse: true, scrollToSel: false, stemmaMode: 'header', stemmaTime: true, cladMin: 1, cladNoTransp: true, cladFreq: true, cladVowel: false, cladOff: new Set(), cladRoot: '', stemmaBase: 'lemma', stemmaMin: 3, stemmaCov: 0.5, stemmaSel: null, panelOff: { synopse: true }, syn: [], synSec: '*', synOnlyVar: false, synCompact: false, synMode: 'spalten', workMode: false,
   };
 
   // ---------- Hilfsfunktionen ----------
@@ -1185,13 +1236,13 @@ details.cf-places ul { margin: 2px 0; padding-left: 14px; } details.cf-places li
     ['[data-ref="leit"]', 'Abweichung von einem frei gewählten Leitzeugen, zum Beispiel einer Leithandschrift.', 'Deviation from a lead witness of your choice, e.g. a base manuscript.'],
     ['#glevel', 'Hauptgruppe: Mehrheit von a, b usw. Untergruppe: kleinste Gruppe mit mindestens drei Zeugen an der Stelle.', 'Main group: majority of a, b etc. Subgroup: smallest group with at least three witnesses at the place.'],
     ['[data-v="typ"]', 'Farbe je Art der Abweichung.', 'One colour per kind of deviation.'],
-    ['[data-v="skizze"]', 'Nur grau (Orthographie) und schwarz (Variante), wie in der Skizze.', 'Only grey (orthography) and black (variant), as in the sketch.'],
+    ['[data-v="skizze"]', 'Nur grau (Orthographie) und schwarz (Variante).', 'Only grey (orthography) and black (variant).'],
     ['[data-v="stelle"]', 'Jede Variationseinheit als eigene Markierung an ihrer Textposition.', 'Each variation unit as its own mark at its position in the text.'],
     ['[data-v="abschnitt"]', 'Zusammengefasst je Abschnitt: Abweichungen je 100 Wörter des erhaltenen Textes.', 'Aggregated per section: deviations per 100 words of extant text.'],
     ['[data-v="gruppe"]', 'Zeugen in der Reihenfolge und Gliederung der Zeugenliste.', 'Witnesses in the order and structure of the list of witnesses.'],
     ['[data-v="varianz"]', 'Zeugen nach Abweichungsrate sortiert, die stärksten oben.', 'Witnesses sorted by rate of deviation, highest first.'],
-    ['#sankey-col', 'Ob je Abschnitt oder je Block von Variationseinheiten gruppiert wird.', 'Whether grouping is done per section or per block of variation units.'],
-    ['#sankey-thr', 'Ab welcher Übereinstimmung zwei Zeugen im selben Knoten landen.', 'From which level of agreement two witnesses end up in the same node.'],
+    ['#sankey-col', 'Automatisch: so viele Spalten, wie in die Breite passen, aus ganzen Abschnitten zusammengesetzt. Abschnitte: je Abschnitt (sehr kurze mit dem nächsten zusammen). Oder je Block von Variationseinheiten.', 'Automatic: as many columns as fit the width, built from whole sections. Sections: one per section (very short ones merged with the next). Or per block of variation units.'],
+    ['#sankey-thr', 'Ab welcher Übereinstimmung zwei Zeugen im selben Knoten landen. Gezählt werden nur Stellen, an denen mindestens zwei Zeugen eine Variante teilen; Sonderlesarten einzelner Zeugen bleiben außer Betracht.', 'From which level of agreement two witnesses end up in the same node. Only places where at least two witnesses share a variant are counted; singular readings are left aside.'],
     ['#upset-lem', 'Auch Kombinationen von Zeugen zählen, die gemeinsam mit dem Bezug gehen.', 'Also count combinations of witnesses that agree with the reference.'],
     ['#upset-min', 'Kombinationen mit weniger Zeugen ausblenden; 1 zeigt auch Einzellesarten.', 'Hide combinations with fewer witnesses; 1 also shows singular readings.'],
     ['#upset-top', 'Wie viele Kombinationen gezeigt werden, die häufigsten zuerst.', 'How many combinations are shown, most frequent first.'],
@@ -1224,6 +1275,9 @@ details.cf-places ul { margin: 2px 0; padding-left: 14px; } details.cf-places li
     ['#syn-only', 'Nur Zeilen bzw. Spalten zeigen, in denen mindestens ein gewählter Zeuge abweicht.', 'Only show rows or columns where at least one selected witness deviates.'],
     ['#descr-btn', 'Abschriften (Zeugen mit @source, codices descripti) ein- oder ausblenden; sie verzerren sonst Mehrheiten und Kombinationen.', 'Show or hide copies (witnesses with @source, codices descripti); otherwise they distort majorities and combinations.'],
     ['#panel-toggle', 'Die rechte Spalte mit Überblick und Apparateintrag ein- oder ausblenden.', 'Show or hide the right-hand column with overview and apparatus entry.'],
+    ['[data-v="fenster"]', 'Den Text in gleich große Fenster teilen (Größe passt sich der Breite an) und je Zeuge und Fenster zusammenfassen. Geeignet für lange Texte.', 'Split the text into equal windows (size adapts to the width) and summarise per witness and window. Suited to long texts.'],
+    ['[data-v="dichte"]', 'Farbe: Zahl der Abweichungen je 100 Wörter.', 'Colour: deviations per 100 words.'],
+    ['[data-v="naehe"]', 'Farbe: der Zeuge, mit dem dieser Zeuge im Feld am häufigsten übereinstimmt. Zeigt, ob ein Zeuge im Verlauf des Texts die Vorlage oder Familie wechselt.', 'Colour: the witness this witness agrees with most often in the cell. Shows whether a witness changes exemplar or family in the course of the text.'],
     ['[data-view="raster"]', 'Alle Zeugen über den ganzen Text: jede Abweichung als Markierung.', 'All witnesses across the whole text: each deviation as a mark.'],
     ['[data-view="sankey"]', 'Wie sich Zeugen nach gemeinsamen Lesarten gruppieren und wo sie die Gruppe wechseln.', 'How witnesses group by shared readings and where they change group.'],
     ['[data-view="graph"]', 'Variantengraph eines Abschnitts (wie CollateX).', 'Variant graph of a section (like CollateX).'],
@@ -1429,33 +1483,45 @@ details.cf-places ul { margin: 2px 0; padding-left: 14px; } details.cf-places li
     return c;
   }
 
-  // stückweise Abbildung Wortposition -> Pixel, mit kleinem Abstand zwischen Abschnitten
-  function makeX(width, gap = 2) {
+  // stückweise Abbildung Wortposition -> Pixel, mit kleinem Abstand zwischen Abschnitten.
+  // lo/hi: sichtbarer Ausschnitt in Wörtern (Zoom). Bei vielen Abschnitten schrumpft der Abstand,
+  // damit er nicht die halbe Breite verbraucht.
+  function makeX(width, gap = 2, lo = 0, hi = D.totalWords) {
     const n = D.sections.length;
-    const k = (width - gap * (n - 1)) / D.totalWords;
+    const vis = D.sections.map((s) => Math.max(0, Math.min(hi, s.start + s.words) - Math.max(lo, s.start)));
+    const nv = vis.filter((v) => v > 0).length;
+    gap = nv > 1 ? Math.min(gap, (width * 0.05) / (nv - 1)) : 0;
+    if (gap < 0.6) gap = 0;
+    const k = (width - gap * Math.max(0, nv - 1)) / Math.max(1, hi - lo);
     const x0 = [];
-    let acc = 0;
-    D.sections.forEach((s, i) => { x0.push(acc); acc += s.words * k + gap; });
+    let acc = 0, seen = false;
+    D.sections.forEach((s, i) => { if (vis[i] > 0 && seen) acc += gap; x0.push(acc); if (vis[i] > 0) { acc += vis[i] * k; seen = true; } });
+    const s0 = (i) => Math.max(lo, D.sections[i].start);
     const f = (p, secN) => {
       let i;
       if (secN != null) i = D.sections.findIndex((s) => s.n === secN);
       if (i == null || i < 0) { i = D.sections.findIndex((s) => p < s.start + s.words); if (i < 0) i = n - 1; }
-      const s = D.sections[i];
-      return x0[i] + Math.max(0, Math.min(s.words, p - s.start)) * k;
+      return x0[i] + Math.max(0, Math.min(vis[i], p - s0(i))) * k;
     };
-    f.k = k; f.x0 = x0; f.width = width;
-    f.secSpan = (i) => [x0[i], x0[i] + D.sections[i].words * k];
+    f.k = k; f.x0 = x0; f.width = width; f.gap = gap; f.lo = lo; f.hi = hi;
+    f.visible = (i) => vis[i] > 0;
+    f.secSpan = (i) => [x0[i], x0[i] + vis[i] * k];
     f.range = (a, b) => { // Pixelintervalle für [a,b], über Abschnitte hinweg
       const out = [];
       D.sections.forEach((s, i) => {
-        const lo = Math.max(a, s.start), hi = Math.min(b, s.start + s.words);
-        if (hi > lo) out.push([x0[i] + (lo - s.start) * k, x0[i] + (hi - s.start) * k]);
+        const l = Math.max(a, s.start, lo), h = Math.min(b, s.start + s.words, hi);
+        if (h > l) out.push([x0[i] + (l - s0(i)) * k, x0[i] + (h - s0(i)) * k]);
       });
       return out;
+    };
+    f.invert = (x) => { // Pixel -> Wortposition
+      for (let i = 0; i < n; i++) { if (!vis[i]) continue; const [a, b] = f.secSpan(i); if (x <= b + gap / 2) return s0(i) + Math.max(0, Math.min(vis[i], (x - a) / k)); }
+      return hi;
     };
     return f;
   }
   const unitSpan = (X, u) => { const a = X(u.pos, u.section); const b = X(u.pos + u.len, u.section); return [a, Math.max(b - a, 0)]; };
+  const inRange = (X, u) => u.pos + Math.max(u.len, 1) > X.lo && u.pos < X.hi;
 
   // ---------- Tooltip & Auswahl ----------
   function tipShow(ev, html) {
@@ -1505,16 +1571,44 @@ details.cf-places ul { margin: 2px 0; padding-left: 14px; } details.cf-places li
     const p = defs.append('pattern').attr('id', 'hatch').attr('patternUnits', 'userSpaceOnUse').attr('width', 5).attr('height', 5).attr('patternTransform', 'rotate(45)');
     p.append('rect').attr('width', 5).attr('height', 5).attr('class', 'hatch-bg');
     p.append('line').attr('x1', 0).attr('y1', 0).attr('x2', 0).attr('y2', 5).attr('class', 'hatch-ln');
+    // gepunktet: Zeuge an diesen Stellen im Apparat nicht verzeichnet
+    const q = defs.append('pattern').attr('id', 'nvdots').attr('patternUnits', 'userSpaceOnUse').attr('width', 4).attr('height', 4);
+    q.append('rect').attr('width', 4).attr('height', 4).attr('class', 'hatch-bg');
+    q.append('circle').attr('cx', 2).attr('cy', 2).attr('r', 0.8).attr('class', 'nv-dot');
     return svg;
   }
   const chartWidth = () => Math.max(320, R.chart.clientWidth);
 
   function sectionHeader(g, X, y, hgt) {
-    D.sections.forEach((s, i) => {
+    const vis = D.sections.map((s, i) => i).filter((i) => X.visible(i));
+    const top = (s) => (s.n === 'T' ? 'T' : s.n.split('.')[0]);
+    const lab = (n) => (n === 'T' ? L('Tit.') : n);
+    const fits = (txt, w) => w >= Math.max(16, String(txt).length * 6.4 + 4);
+    const avg = X.width / Math.max(1, vis.length);
+    const hier = D.sections.some((s) => s.n.includes('.'));
+    let lastEnd = -Infinity;
+    vis.forEach((i, j) => {
+      const s = D.sections[i];
       const [a, b] = X.secSpan(i);
-      if (b - a >= 16) g.append('text').attr('class', 'sec-lab').attr('x', (a + b) / 2).attr('y', y).attr('text-anchor', 'middle').text(s.n === 'T' ? L('Tit.') : s.n);
-      if (i > 0) g.append('line').attr('class', 'sec-rule').attr('x1', a - 1).attr('x2', a - 1).attr('y1', y + 6).attr('y2', y + 6 + hgt);
+      const newTop = j > 0 && top(D.sections[vis[j - 1]]) !== top(s);
+      if (j > 0 && (X.gap >= 1 || newTop)) g.append('line').attr('class', 'sec-rule' + (newTop && X.gap < 1 ? ' sec-rule-top' : '')).attr('x1', a - X.gap / 2 - 0.5).attr('x2', a - X.gap / 2 - 0.5).attr('y1', y + 6).attr('y2', y + 6 + hgt);
+      if (avg >= 16) {
+        // bei hierarchischer Gliederung steht die obere Ebene in eigener Zeile, hier nur das letzte Glied
+        const t = hier && s.n !== 'T' ? s.n.split('.').slice(1).join('.') || s.n : lab(s.n);
+        if (fits(t, b - a)) g.append('text').attr('class', 'sec-lab').attr('x', (a + b) / 2).attr('y', y).attr('text-anchor', 'middle').text(t);
+        return;
+      }
+      if (hier) return;
+      // flache Gliederung mit sehr vielen Abschnitten: Beschriftung in regelmäßigen Abständen
+      const t = lab(s.n);
+      if (a >= lastEnd + 10) { g.append('text').attr('class', 'sec-lab').attr('x', a).attr('y', y).text(t); lastEnd = a + t.length * 6.4; }
     });
+    if (hier) { // obere Gliederungsebene (Bücher, Kapitel) beschriften; bei Platz für Einzelabschnitte eine Zeile darüber
+      const yt = avg >= 16 ? y - 13 : y;
+      const spans = new Map();
+      vis.forEach((i) => { const t = top(D.sections[i]); const [a, b] = X.secSpan(i); const r = spans.get(t) || [a, b]; spans.set(t, [Math.min(r[0], a), Math.max(r[1], b)]); });
+      for (const [t, [a, b]] of spans) if (fits(lab(t), b - a)) g.append('text').attr('class', 'sec-lab' + (avg >= 16 ? ' sec-top' : '')).attr('x', avg >= 16 ? Math.max(a, 0) + 2 : (a + b) / 2).attr('y', yt).attr('text-anchor', avg >= 16 ? 'start' : 'middle').text(lab(t));
+    }
   }
 
   // ---------- Ansicht A: Raster ----------
@@ -1530,6 +1624,15 @@ details.cf-places ul { margin: 2px 0; padding-left: 14px; } details.cf-places li
       ys.push(y); y += step; prev = w;
     });
     return ys;
+  }
+  // linker Rand, damit die Gruppenbezeichnungen vor den Klammern nicht abgeschnitten werden
+  function bracketPad(T) {
+    let need = 0;
+    for (const n of T.nodes.values()) {
+      const txt = n.id === '_par' ? 'Par.' : (n.parts || []).map((p) => p.t).join('') || n.label || '';
+      need = Math.max(need, txt.length * 6.2 - (n.depth * 20 + 13));
+    }
+    return Math.max(4, Math.ceil(need) + 4);
   }
   function drawBrackets(svg, wits, ys, rh, x0) {
     const T = groupTree();
@@ -1549,53 +1652,199 @@ details.cf-places ul { margin: 2px 0; padding-left: 14px; } details.cf-places li
     const a = d3.lab(css('--c-lem')), b = d3.lab(css('--c-seq'));
     return d3.interpolateLab(a, b)(Math.max(0, Math.min(1, t)));
   }
+  // Farbe je Zeuge für „nächster Zeuge“: Familie (oberste Gruppe) als Farbton, Mitglieder in Abstufungen
+  function witColors(wits) {
+    const base = ['--c-subst', '--c-add', '--c-transp', '--c-om', '--c-orth'].map(css);
+    const fam = new Map();
+    for (const w of wits) { const p = hasGroups() ? witPath(w) : []; const k = p.length ? p[0].id : hasGroups() ? '_' : w; if (!fam.has(k)) fam.set(k, []); fam.get(k).push(w); }
+    const col = new Map();
+    if (!hasGroups()) { wits.forEach((w, i) => col.set(w, d3.schemeTableau10[i % 10])); return col; }
+    [...fam.values()].forEach((ms, fi) => {
+      const b = d3.lab(base[fi % base.length]);
+      ms.forEach((w, j) => col.set(w, ms.length < 2 ? b.formatHex() : d3.interpolateLab(b.darker(0.9), b.brighter(1.1))(j / (ms.length - 1))));
+    });
+    return col;
+  }
+  // Fenster bzw. Abschnitte im sichtbaren Bereich, mit den zugehörigen Variationseinheiten
+  function rasterBins(X, mode) {
+    const bins = [];
+    if (mode === 'abschnitt') {
+      D.sections.forEach((s, i) => { if (X.visible(i)) bins.push({ a: Math.max(X.lo, s.start), b: Math.min(X.hi, s.start + s.words), label: s.label, units: [] }); });
+    } else {
+      const want = Math.max(10, Math.floor(X.width / 7));
+      const raw = (X.hi - X.lo) / want;
+      const nice = [5, 10, 20, 25, 50, 100, 200, 250, 500, 1000, 2000, 2500, 5000].find((v) => v >= raw) || Math.ceil(raw / 1000) * 1000;
+      for (let a = X.lo; a < X.hi; a += nice) bins.push({ a, b: Math.min(X.hi, a + nice), units: [] });
+      bins.size = nice;
+    }
+    const starts = bins.map((b) => b.a);
+    for (const u of D.units) {
+      if (!inRange(X, u)) continue;
+      const i = Math.max(0, d3.bisectRight(starts, u.pos) - 1);
+      if (bins[i]) bins[i].units.push(u);
+    }
+    for (const b of bins) {
+      if (!b.label) { const s1 = D.sections.find((s) => b.a < s.start + s.words), s2 = D.sections.find((s) => b.b - 1 < s.start + s.words); b.label = s1 === s2 || !s2 ? s1.label : s1.label + ' – ' + s2.label.replace(/^§ /, ''); }
+      const px = X.range(b.a, b.b);
+      b.x = px.length ? px[0][0] : X(b.a); b.x2 = px.length ? px[px.length - 1][1] : X(b.b);
+    }
+    return bins;
+  }
+  // Strecken (mind. 5 aufeinanderfolgende Einheiten), an denen der Zeuge im Apparat nicht verzeichnet ist
+  function nvRuns(w, X) {
+    const out = [];
+    let a = null, n = 0, last = 0;
+    for (const u of D.units) {
+      if (!inRange(X, u) || u.parentKey != null) continue;
+      if (u.status[w] === 'nv') { if (a == null) { a = u.pos; n = 0; } n++; last = u.pos + u.len; }
+      else if (u.status[w] && u.status[w] !== 'outer') { if (a != null && n >= 5) out.push([a, last]); a = null; }
+    }
+    if (a != null && n >= 5) out.push([a, last]);
+    return out;
+  }
+  function nearest(units0, w, wits) {
+    const units = informative(units0, wits);
+    let best = null;
+    const all = [];
+    for (const v of wits) {
+      if (v === w) continue;
+      const r = agreement(units, w, v);
+      if (r.n < 3) continue;
+      all.push({ v, p: r.v, n: r.n });
+    }
+    all.sort((a, b) => b.p - a.p);
+    if (all.length) best = all[0];
+    return { best, all };
+  }
+  // Überblicksleiste über den ganzen Text mit Bereichswahl (Zoom)
+  function rasterOverview(svg, ml, width, y, h, wits) {
+    const X0 = makeX(width, 2);
+    const g = svg.append('g').attr('class', 'ovw').attr('transform', `translate(${ml},${y})`);
+    const nb = Math.max(20, Math.floor(width / 3));
+    const sz = D.totalWords / nb;
+    const val = new Float64Array(nb);
+    for (const u of D.units) {
+      const i = Math.min(nb - 1, Math.floor(u.pos / sz));
+      for (const w of wits) if (isDev(eff(u, w))) val[i]++;
+    }
+    const mx = d3.max(val) || 1;
+    g.append('rect').attr('class', 'ovw-bg').attr('width', width).attr('height', h);
+    for (let i = 0; i < nb; i++) {
+      if (!val[i]) continue;
+      const a = X0(i * sz), b = X0((i + 1) * sz);
+      const hh = Math.max(1, (val[i] / mx) * (h - 2));
+      g.append('rect').attr('class', 'ovw-bar').attr('x', a).attr('y', h - hh).attr('width', Math.max(0.8, b - a)).attr('height', hh);
+    }
+    if (ml >= 70) svg.append('text').attr('class', 'tick').attr('x', ml - 8).attr('y', y + h / 2 + 3).attr('text-anchor', 'end').text(L('Überblick'));
+    const brush = d3.brushX().extent([[0, 0], [width, h]]).on('end', (ev) => {
+      if (!ev.sourceEvent) return;
+      if (!ev.selection) { S.range = null; renderView(); return; }
+      const [x1, x2] = ev.selection;
+      const a = Math.floor(X0.invert(x1)), b = Math.ceil(X0.invert(x2));
+      S.range = b - a >= 5 ? [a, b] : null;
+      S.sankeySel = null;
+      renderView(); renderPanel();
+    });
+    const bg = g.append('g').attr('class', 'brush').call(brush);
+    if (S.range) bg.call(brush.move, [X0(S.range[0]), X0(S.range[1])]);
+    return X0;
+  }
   function renderRaster() {
     const W = chartWidth();
     const wits = orderedWits();
-    const hasConj = conjUnits().length > 0;
     const T = groupTree();
-    const brW = S.order === 'gruppe' && hasGroups() ? T.depth * 20 : 0;
-    const ml = 46 + brW, mt = hasConj ? 44 : 30, rh = 22, rg = 5, mr = 4;
+    const long = D.units.length > 800 || D.sections.length > 60;
+    if (!long) S.range = null;
+    const [lo, hi] = S.range || [0, D.totalWords];
+    let brW = S.order === 'gruppe' && hasGroups() ? T.depth * 20 : 0;
+    const brX = brW ? bracketPad(T) : 4;
+    brW += brX - 4;
+    const ml = 46 + brW, rh = 22, rg = 5, mr = 4;
+    const ovH = long ? 30 : 0, ovTop = 6;
+    const X = makeX(W - ml - mr, 2, lo, hi);
+    const conjs = conjUnits().filter((u) => inRange(X, u));
+    const hasConj = conjs.length > 0;
+    const head = long ? ovTop + ovH + 26 : 0;
+    const mt = head + (hasConj ? 44 : 30);
     const ys = rowLayout(wits, mt, rh + rg);
-    const H = ys[ys.length - 1] + rh + 30;
+    const agg = S.agg;
+    const legendH = agg !== 'stelle' && S.aggVal === 'naehe' ? 26 : 0;
+    const H = ys[ys.length - 1] + rh + 30 + legendH + (long ? 14 : 0);
     const svg = svgBase(W, H);
-    const X = makeX(W - ml - mr);
+    if (long) {
+      rasterOverview(svg, ml, W - ml - mr, ovTop, ovH, wits);
+      const t = svg.append('text').attr('class', 'axis-note').attr('x', ml).attr('y', ovTop + ovH + 13);
+      if (S.range) {
+        const s1 = D.sections.find((s) => lo < s.start + s.words), s2 = D.sections.find((s) => hi - 1 < s.start + s.words);
+        t.text(L('Ausschnitt: Wort {a}–{b} von {n} ({s})', { a: lo + 1, b: hi, n: D.totalWords, s: s1 === s2 ? s1.label : s1.label + ' – ' + s2.label.replace(/^§ /, '') }) + ' · ');
+        t.append('tspan').attr('class', 'link-t').text(L('ganzer Text')).on('click', () => { S.range = null; renderView(); });
+      } else t.text(L('Im Überblick einen Bereich aufziehen, um ihn zu vergrößern.'));
+    }
     const g = svg.append('g').attr('transform', `translate(${ml},0)`);
-    sectionHeader(g, X, hasConj ? 18 : mt - 12, ys[ys.length - 1] + rh - mt + 4 + (mt - 30));
-    if (brW) drawBrackets(svg, wits, ys, rh, 4);
+    sectionHeader(g, X, head + (hasConj ? 18 : 18), ys[ys.length - 1] + rh - mt + 4 + (mt - head - 30));
+    if (brW) drawBrackets(svg, wits, ys, rh, brX);
     if (hasConj) {
       svg.append('text').attr('class', 'tick').attr('x', ml - 8).attr('y', mt - 7).attr('text-anchor', 'end').text(L('Konj.'));
-      for (const u of conjUnits()) {
-        const [a, wd] = unitSpan(X, u);
-        conjMark(g, a + wd / 2, mt - 10, u);
-      }
+      for (const u of conjs) { const [a, wd] = unitSpan(X, u); conjMark(g, a + wd / 2, mt - 10, u); }
     }
-    const maxRate = S.agg === 'abschnitt' ? Math.max(1, d3.max(wits, (w) => d3.max(D.sections.filter((s) => s.words >= 40), (s) => devRate(w, s)))) : 1;
-
+    const bins = agg === 'stelle' ? null : rasterBins(X, agg);
+    const naehe = bins && S.aggVal === 'naehe';
+    const wcol = naehe ? witColors(wits) : null;
+    // Dichte je Zeuge und Feld
+    const cell = (w, b) => {
+      let n = 0;
+      const c = { subst: 0, add: 0, transp: 0, om: 0, orth: 0, nv: 0 };
+      for (const u of b.units) { const e = eff(u, w); if (e in c) c[e]++; if (isDev(e)) n++; }
+      c.nvAll = b.units.length >= 3 && c.nv >= 0.9 * b.units.length;
+      const cw = S.ref === 'leit' && S.leit && S.leit !== w ? sharedWords(w, S.leit, b.a, b.b) : coveredWords(w, b.a, b.b);
+      return { n, c, cw, rate: cw ? (n / cw) * 100 : 0 };
+    };
+    let grid = null, maxRate = 1;
+    if (bins && !naehe) {
+      grid = wits.map((w) => bins.map((b) => cell(w, b)));
+      const rates = [];
+      grid.forEach((row) => row.forEach((c) => { if (c.cw >= 40) rates.push(c.rate); }));
+      maxRate = Math.max(1, d3.quantile(rates.sort(d3.ascending), 0.98) || 1);
+    }
     wits.forEach((w, i) => {
       const y = ys[i];
       const row = g.append('g').attr('transform', `translate(0,${y})`);
       svg.append('text').attr('class', 'row-lab mono').attr('x', ml - 8).attr('y', y + rh / 2 + 4).attr('text-anchor', 'end').text(sig(w));
-      if (S.agg === 'abschnitt') {
-        D.sections.forEach((s, si) => {
-          const [a, b] = X.secSpan(si);
-          const cw = coveredWords(w, s.start, s.start + s.words);
-          const rate = devRate(w, s);
-          const cell = row.append('rect').attr('x', a).attr('y', 0).attr('width', Math.max(1, b - a)).attr('height', rh).attr('rx', 2)
-            .attr('class', 'cell').style('fill', cw ? seqColor(Math.min(1, rate / maxRate)) : null);
-          if (!cw) cell.attr('fill', 'url(#hatch)');
-          cell.on('mousemove', (ev) => {
-            const c = counts(w, s);
-            tipShow(ev, `<div class="tt-head">${esc(s.label)} · ${s.words} ${L('Wörter')}</div><div class="tt-row"><b class="mono">${esc(sig(w))}</b> ${cw ? rate.toFixed(1) + ' ' + L('Abweichungen je 100 Wörter') : L('kein Text')}</div>` +
-              (cw ? KINDS.concat([{ k: 'orth', label: 'Orthographie' }]).map((k) => `<div class="tt-row"><span class="sw k-${k.k}"></span> ${L(k.label)}: ${c[k.k]}</div>`).join('') : ''));
-          }).on('mouseleave', tipHide);
-          for (const [ga, gb] of gaps(w)) for (const [pa, pb] of X.range(Math.max(ga, s.start), Math.min(gb, s.start + s.words))) row.append('rect').attr('x', pa).attr('y', 0).attr('width', pb - pa).attr('height', rh).attr('fill', 'url(#hatch)').attr('pointer-events', 'none');
-          if (cw && b - a > 26) row.append('text').attr('class', 'cell-lab' + (Math.min(1, rate / maxRate) > 0.55 ? ' on-dark' : '')).attr('x', (a + b) / 2).attr('y', rh / 2 + 4).attr('text-anchor', 'middle').attr('pointer-events', 'none').text(rate.toFixed(rate < 10 ? 1 : 0));
+      if (bins) {
+        const gapsW = gaps(w);
+        bins.forEach((b, j) => {
+          const a = b.x, wd = Math.max(1, b.x2 - b.x);
+          const cw = coveredWords(w, b.a, b.b);
+          const r = row.append('rect').attr('x', a).attr('y', 0).attr('width', wd).attr('height', rh).attr('class', 'cell');
+          if (!cw) { r.attr('fill', 'url(#hatch)'); }
+          let tip;
+          if (naehe) {
+            const nn = cw ? nearest(b.units, w, wits) : { best: null, all: [] };
+            if (nn.best) r.style('fill', wcol.get(nn.best.v));
+            else if (cw) r.attr('fill', 'url(#nvdots)');
+            if (nn.best && wd >= 13) row.append('text').attr('class', 'cell-lab on-dark mono').attr('x', a + wd / 2).attr('y', rh / 2 + 4).attr('text-anchor', 'middle').attr('pointer-events', 'none').text(sig(nn.best.v));
+            tip = () => `<div class="tt-head">${esc(b.label)} · ${b.b - b.a} ${L('Wörter')}</div><div class="tt-row"><b class="mono">${esc(sig(w))}</b> ${cw ? L('stimmt am meisten überein mit') : L('kein Text')}</div>` +
+              nn.all.slice(0, 4).map((x) => `<div class="tt-row"><span class="sw" style="background:${wcol.get(x.v)}"></span> <span class="mono">${esc(sig(x.v))}</span> ${(x.p * 100).toFixed(1)} % <span class="muted">(${x.n} ${L('Stellen')})</span></div>`).join('');
+          } else {
+            const c = grid[i][j];
+            const t = Math.min(1, c.rate / maxRate);
+            if (cw && c.c.nvAll) r.attr('fill', 'url(#nvdots)');
+            else if (cw) r.style('fill', seqColor(t));
+            if (cw && wd > 26) row.append('text').attr('class', 'cell-lab' + (t > 0.55 ? ' on-dark' : '')).attr('x', a + wd / 2).attr('y', rh / 2 + 4).attr('text-anchor', 'middle').attr('pointer-events', 'none').text(c.rate.toFixed(c.rate < 10 ? 1 : 0));
+            tip = () => `<div class="tt-head">${esc(b.label)} · ${b.b - b.a} ${L('Wörter')}</div><div class="tt-row"><b class="mono">${esc(sig(w))}</b> ${cw ? c.rate.toFixed(1) + ' ' + L('Abweichungen je 100 Wörter') : L('kein Text')}</div>` +
+              (cw ? KINDS.concat([{ k: 'orth', label: 'Orthographie' }]).map((k) => `<div class="tt-row"><span class="sw k-${k.k}"></span> ${L(k.label)}: ${c.c[k.k]}</div>`).join('') : '') +
+              (cw && c.c.nv ? `<div class="tt-row">${L('nicht verzeichnet')}: ${c.c.nv} ${L('von {n} Stellen', { n: b.units.length })}</div>` : '');
+          }
+          r.on('mousemove', (ev) => tipShow(ev, tip() + (S.range ? '' : `<div class="tt-hint">${L('Klicken zum Vergrößern')}</div>`))).on('mouseleave', tipHide)
+            .on('click', () => { if (long && !S.range) { const span = Math.max(b.b - b.a, 400); const m = (b.a + b.b) / 2; S.range = [Math.max(0, Math.round(m - span * 2)), Math.min(D.totalWords, Math.round(m + span * 2))]; renderView(); } });
+          if (cw) for (const [ga, gb] of gapsW) { if (gb <= b.a || ga >= b.b) continue; for (const [pa, pb] of X.range(Math.max(ga, b.a), Math.min(gb, b.b))) row.append('rect').attr('x', pa).attr('y', 0).attr('width', pb - pa).attr('height', rh).attr('fill', 'url(#hatch)').attr('pointer-events', 'none'); }
         });
       } else {
-        D.sections.forEach((s, si) => { const [a, b] = X.secSpan(si); row.append('rect').attr('x', a).attr('width', Math.max(1, b - a)).attr('height', rh).attr('class', 'k-lem'); });
+        D.sections.forEach((s, si) => { if (!X.visible(si)) return; const [a, b] = X.secSpan(si); row.append('rect').attr('x', a).attr('width', Math.max(1, b - a)).attr('height', rh).attr('class', 'k-lem'); });
         for (const [ga, gb] of gaps(w)) for (const [pa, pb] of X.range(ga, gb)) row.append('rect').attr('x', pa).attr('width', pb - pa).attr('height', rh).attr('fill', 'url(#hatch)');
+        for (const [ra, rb] of nvRuns(w, X)) for (const [pa, pb] of X.range(ra, rb)) row.append('rect').attr('x', pa).attr('width', pb - pa).attr('height', rh).attr('fill', 'url(#nvdots)').attr('pointer-events', 'none');
         for (const u of D.units) {
+          if (!inRange(X, u)) continue;
           const e = eff(u, w);
           if (!isDev(e)) continue;
           const [a, wd] = unitSpan(X, u);
@@ -1605,10 +1854,20 @@ details.cf-places ul { margin: 2px 0; padding-left: 14px; } details.cf-places li
         }
       }
     });
-    if (S.agg === 'abschnitt') {
-      const ly = H - 8;
-      svg.append('text').attr('class', 'axis-note').attr('x', ml).attr('y', ly).text(L('Zahl im Feld: Abweichungen je 100 Wörter (Skala 0 bis {m}); Spaltenbreite proportional zur Textlänge', { m: maxRate.toFixed(0) }));
-    } else svg.append('text').attr('class', 'axis-note').attr('x', ml).attr('y', H - 8).text(L('Textverlauf in Wörtern ({n}), Breite proportional zur Länge', { n: D.totalWords }));
+    const ly = H - 8 - legendH - (long ? 14 : 0);
+    const words = hi - lo;
+    if (naehe) {
+      svg.append('text').attr('class', 'axis-note').attr('x', ml).attr('y', ly).text(L('Farbe im Feld: der Zeuge, mit dem dieser Zeuge dort am häufigsten übereinstimmt, gezählt an Stellen mit geteilten Varianten (mind. 3)') + (bins.size ? ' · ' + L('Fenster zu {n} Wörtern', { n: bins.size }) : ''));
+      const lg = svg.append('g').attr('transform', `translate(${ml},${H - 22})`);
+      let x = 0;
+      for (const w of wits) { lg.append('rect').attr('x', x).attr('y', 0).attr('width', 12).attr('height', 12).attr('rx', 2).style('fill', wcol.get(w)); lg.append('text').attr('class', 'tick mono').attr('x', x + 16).attr('y', 10).text(sig(w)); x += 22 + String(sig(w)).length * 7; }
+    } else if (bins) {
+      svg.append('text').attr('class', 'axis-note').attr('x', ml).attr('y', ly).text((bins.size ? L('Fenster zu {n} Wörtern', { n: bins.size }) + '; ' : '') + L('Zahl im Feld: Abweichungen je 100 Wörter (Skala 0 bis {m}); Spaltenbreite proportional zur Textlänge', { m: maxRate.toFixed(0) }));
+    } else svg.append('text').attr('class', 'axis-note').attr('x', ml).attr('y', ly).text(L('Textverlauf in Wörtern ({n}), Breite proportional zur Länge', { n: words }));
+    if (svg.select('[fill="url(#nvdots)"]').size()) {
+      if (long) svg.append('text').attr('class', 'axis-note').attr('x', ml).attr('y', ly + 14).text(L('gepunktet: Zeuge im Apparat nicht verzeichnet'));
+      else svg.select('text.axis-note:last-of-type').append('tspan').text(' · ' + L('gepunktet: Zeuge im Apparat nicht verzeichnet'));
+    }
     markSelection();
   }
 
@@ -1631,17 +1890,43 @@ details.cf-places ul { margin: 2px 0; padding-left: 14px; } details.cf-places li
   }
 
   // ---------- Ansicht C: Sankey (Gruppenbildung der Zeugen im Textverlauf) ----------
+  // Spalten des Sankey-Diagramms im sichtbaren Bereich (S.range, gemeinsam mit dem Raster)
   function sankeyColumns() {
-    const us = D.units.filter((u) => !u.overlap);
+    const [lo, hi] = S.range || [0, D.totalWords];
+    const us = D.units.filter((u) => !u.overlap && u.pos + Math.max(u.len, 1) > lo && u.pos < hi);
     const lab = (n) => (n === 'T' ? L('Tit.') : '§ ' + n);
-    if (S.sankeyCol === 'abschnitt') return D.sections.map((s) => ({ label: lab(s.n), units: us.filter((u) => u.section === s.n) })).filter((c) => c.units.length);
-    const n = +S.sankeyCol, cols = [];
-    for (let i = 0; i < us.length; i += n) {
-      const part = us.slice(i, i + n);
-      const a = part[0].section, b = part[part.length - 1].section;
-      cols.push({ label: a === b ? lab(a) : lab(a) + '–' + (b === 'T' ? L('Tit.') : b), units: part });
+    const labR = (a, b) => (a === b ? lab(a) : lab(a) + '–' + (b === 'T' ? L('Tit.') : b));
+    const bySec = new Map();
+    for (const u of us) { if (!bySec.has(u.section)) bySec.set(u.section, []); bySec.get(u.section).push(u); }
+    const secs = D.sections.filter((s) => bySec.has(s.n)).map((s) => ({ n: s.n, units: bySec.get(s.n) }));
+    // aufeinanderfolgende Abschnitte zusammenfassen, bis eine Spalte mindestens 'min' Stellen hat
+    const merge = (min) => {
+      const cols = [];
+      let cur = null;
+      for (const s of secs) {
+        if (!cur) cur = { a: s.n, b: s.n, units: [] };
+        cur.units.push(...s.units); cur.b = s.n;
+        if (cur.units.length >= min) { cols.push(cur); cur = null; }
+      }
+      if (cur) { if (cols.length && cur.units.length < min / 2) { const l = cols[cols.length - 1]; l.units.push(...cur.units); l.b = cur.b; } else cols.push(cur); }
+      return cols.map((c) => ({ label: labR(c.a, c.b), units: c.units }));
+    };
+    const chunks = (n) => {
+      const cols = [];
+      for (let i = 0; i < us.length; i += n) { const part = us.slice(i, i + n); cols.push({ label: labR(part[0].section, part[part.length - 1].section), units: part }); }
+      return cols;
+    };
+    if (S.sankeyCol === 'abschnitt') return merge(8); // sehr kurze Abschnitte (z. B. Titel, Überschrift) mit dem nächsten zusammen
+    if (S.sankeyCol === 'auto') {
+      const bySecCols = merge(8);
+      if (bySecCols.length <= Math.floor((chartWidth() - 90) / 60)) return bySecCols; // passt je Abschnitt in die Breite
+      const target = Math.max(6, Math.min(24, Math.round((chartWidth() - 90) / 95)));
+      const per = Math.max(8, Math.ceil(us.length / target));
+      const cols = merge(per);
+      // ein einzelner sehr langer Abschnitt würde sonst eine einzige Spalte ergeben
+      return cols.length >= Math.min(target, 4) || us.length < 2 * per ? cols : chunks(per);
     }
-    return cols;
+    return chunks(+S.sankeyCol);
   }
   function rkey(u, w) {
     const k = keyOf(u, w);
@@ -1654,10 +1939,21 @@ details.cf-places ul { margin: 2px 0; padding-left: 14px; } details.cf-places li
     for (const u of units) { const x = rkey(u, a), y = rkey(u, b); if (x == null || y == null) continue; n++; if (x === y) ag++; }
     return { n, v: n ? ag / n : null };
   }
-  function clusterColumn(col, wits) {
+  // Aussagekräftige Stellen: eine vom Bezugstext abweichende Lesart wird von mindestens zwei der gewählten Zeugen geteilt.
+  // Sonderlesarten einzelner Zeugen und Stellen, an denen alle übrigen übereinstimmen, heben die Übereinstimmung
+  // aller Paare gleichermaßen und verwischen sonst die Familien.
+  function informative(units, wits) {
+    return units.filter((u) => {
+      const ref = refKey(u), cnt = new Map();
+      for (const w of wits) { const k = rkey(u, w); if (k == null || k === ref) continue; const c = (cnt.get(k) || 0) + 1; if (c >= 2) return true; cnt.set(k, c); }
+      return false;
+    });
+  }
+  function clusterColumn(col0, wits) {
     const MIN = 3;
-    const present = wits.filter((w) => col.units.filter((u) => rkey(u, w) != null).length >= MIN);
+    const present = wits.filter((w) => col0.units.filter((u) => rkey(u, w) != null).length >= MIN);
     const absent = wits.filter((w) => !present.includes(w));
+    const col = { units: informative(col0.units, wits) };
     const A = {};
     for (const a of present) for (const b of present) A[a + '|' + b] = agreement(col.units, a, b);
     const link = (c1, c2) => { let s = 0, k = 0; for (const a of c1) for (const b of c2) { const r = A[a + '|' + b]; if (r.v != null) { s += r.v; k++; } } return k ? s / k : 0; };
@@ -1695,7 +1991,9 @@ details.cf-places ul { margin: 2px 0; padding-left: 14px; } details.cf-places li
     const cols = sankeyColumns();
     const layout = cols.map((c) => clusterColumn(c, wits));
     const W0 = chartWidth();
-    const slot = 12, gapN = 14, nodeW = 8, ml = 44, mr = 44, mt = 40;
+    const long = D.units.length > 800 || D.sections.length > 60;
+    if (!long) S.range = null;
+    const slot = 12, gapN = 14, nodeW = 8, ml = 44, mr = 44, mt = 40 + (long ? 66 : 0);
     const minColW = 56;
     const W = Math.max(W0, ml + mr + (cols.length - 1) * minColW + nodeW);
     const colX = (i) => ml + (cols.length > 1 ? (i * (W - ml - mr - nodeW)) / (cols.length - 1) : 0);
@@ -1713,12 +2011,18 @@ details.cf-places ul { margin: 2px 0; padding-left: 14px; } details.cf-places li
     });
     const H = maxH + 26;
     const svg = svgBase(W, H);
+    if (long) {
+      rasterOverview(svg, ml, W0 - ml - mr, 30, 26, wits);
+      const t = svg.append('text').attr('class', 'axis-note').attr('x', ml).attr('y', 30 + 26 + 13);
+      if (S.range) { t.text(L('Ausschnitt: Wort {a}–{b} von {n} ({s})', { a: S.range[0] + 1, b: S.range[1], n: D.totalWords, s: cols.length ? cols[0].label + ' – ' + cols[cols.length - 1].label.replace(/^§ /, '') : '' }) + ' · '); t.append('tspan').attr('class', 'link-t').text(L('ganzer Text')).on('click', () => { S.range = null; renderView(); }); }
+      else t.text(L('Im Überblick einen Bereich aufziehen, um ihn zu vergrößern.'));
+    }
     // Legende
     const tops = [];
     D.witnesses.forEach((w) => { if (!S.wits.has(w.id)) return; const c = groupColorClass(w.id); const lbl = witPath(w.id)[0].label; if (!tops.some((t) => t.c === c)) tops.push({ c, lbl }); });
     let lx = ml;
     if (hasGroups()) tops.forEach((t) => { svg.append('rect').attr('class', 'ribbon ' + t.c).attr('x', lx).attr('y', 6).attr('width', 12).attr('height', 10).attr('rx', 2).style('opacity', 0.8); const tx = svg.append('text').attr('class', 'axis-note').attr('x', lx + 16).attr('y', 15).text(L('Gruppe') + ' ' + t.lbl); lx += 16 + tx.node().getComputedTextLength() + 18; });
-    svg.append('text').attr('class', 'axis-note').attr('x', lx).attr('y', 15).text(L('· Zeugen gruppiert ab {p} % Übereinstimmung', { p: Math.round(S.sankeyThr * 100) }));
+    svg.append('text').attr('class', 'axis-note').attr('x', lx).attr('y', 15).text(L('· Zeugen gruppiert ab {p} % Übereinstimmung', { p: Math.round(S.sankeyThr * 100) }) + ' ' + L('an Stellen mit geteilten Varianten'));
 
     const gR = svg.append('g'), gN = svg.append('g'), gL = svg.append('g');
     const ribbon = (x1, y1, x2, y2, h) => { const xm = (x1 + x2) / 2; return `M${x1},${y1}C${xm},${y1} ${xm},${y2} ${x2},${y2}L${x2},${y2 + h}C${xm},${y2 + h} ${xm},${y1 + h} ${x1},${y1 + h}Z`; };
@@ -1733,7 +2037,16 @@ details.cf-places ul { margin: 2px 0; padding-left: 14px; } details.cf-places li
       }
     }
     layout.forEach((nodes, i) => {
-      gL.append('text').attr('class', 'sec-lab').attr('x', colX(i) + nodeW / 2).attr('y', mt - 10).attr('text-anchor', 'middle').text(cols[i].label);
+      // Beschriftung: Anfang der Spalte; bei Platzmangel abwechselnd in zwei Zeilen und gekürzt, vollständig im Tooltip
+      const colW = cols.length > 1 ? (W - ml - mr - nodeW) / (cols.length - 1) : W;
+      const full = cols[i].label;
+      const short = full.split('–')[0];
+      const two = d3.max(cols, (c) => c.label.split('–')[0].length) * 6.2 > colW * 0.7;
+      const maxCh = Math.max(4, Math.floor(((two ? 2 : 1) * colW - 8) / 6.2));
+      const txt = short.length > maxCh ? short.slice(0, maxCh - 1) + '…' : short;
+      const anchor = i === 0 ? 'start' : i === cols.length - 1 ? 'end' : 'middle';
+      const lx0 = i === 0 ? colX(i) : i === cols.length - 1 ? colX(i) + nodeW : colX(i) + nodeW / 2;
+      gL.append('text').attr('class', 'sec-lab').attr('x', lx0).attr('y', mt - 10 - (two && i % 2 ? 12 : 0)).attr('text-anchor', anchor).text(txt).append('title').text(full + ' · ' + cols[i].units.length + ' ' + L('Stellen'));
       nodes.forEach((nd, ni) => {
         const sel = S.sankeySel && S.sankeySel.col === i && S.sankeySel.node === ni;
         const r = gN.append('rect').attr('class', 'snode' + (nd.absent ? ' absent' : '') + (sel ? ' is-sel' : '')).attr('x', colX(i)).attr('y', nd.y0).attr('width', nodeW).attr('height', nd.y1 - nd.y0 - 1).attr('rx', 2);
@@ -2839,7 +3152,11 @@ details.cf-places ul { margin: 2px 0; padding-left: 14px; } details.cf-places li
       R.dendroScale = y;
     } else {
       H = top + (hier.height || 1) * rowH + bottom;
-      d3.tree().size([W - 80, (hier.height || 1) * rowH]).separation((a, b) => (a.parent === b.parent ? 1 : 1.3))(hier);
+      // Mit Zeitachse stehen die Knoten nicht mehr nach Tiefe in Zeilen; der kompakte Baum (d3.tree) würde dann
+      // Zeugen einer höheren Ebene zwischen die Nachkommen eines Nachbarknotens schieben (Linien kreuzen).
+      // Deshalb dort d3.cluster: alle Blätter nebeneinander in Baumreihenfolge, jeder Teilbaum ein eigener Streifen.
+      const timeLayout = S.stemmaTime && hier.leaves().some((n) => n.data.kind === 'wit' && dating(n.data.w));
+      (timeLayout ? d3.cluster() : d3.tree()).size([W - 80, (hier.height || 1) * rowH]).separation((a, b) => (a.parent === b.parent ? 1 : 1.3))(hier);
       hier.each((n) => { n.y += top; });
     }
     const timeOn = mode !== 'dendro' && S.stemmaTime && hier.leaves().some((n) => n.data.kind === 'wit' && dating(n.data.w)) ;
@@ -2860,7 +3177,14 @@ details.cf-places ul { margin: 2px 0; padding-left: 14px; } details.cf-places li
         n.y = d ? ty((d.from + d.to) / 2) : undated;
       });
       // Gruppenknoten eine Stufe über ihrem frühesten Nachkommen, so dass jede Ebene ihre eigene Höhe hat
-      hier.eachAfter((n) => { if (n.data.kind !== 'wit' && n.children) n.y = d3.min(n.children, (c) => c.y) - STEP; });
+      // Ein Zeuge mit Nachkommen (z. B. als Wurzel gewählt oder Vorlage von Abschriften) muss über ihnen stehen;
+      // ist er laut Datierung jünger, steht der Punkt über den Nachkommen und die Datierung bleibt als Balken an ihrem Ort
+      hier.eachAfter((n) => {
+        if (!n.children) return;
+        const up = d3.min(n.children, (c) => c.y) - STEP;
+        if (n.data.kind !== 'wit') n.y = up;
+        else if (n.y > up) { n.y = up; n.lifted = true; }
+      });
       // ungenutzten Raum oberhalb des obersten Knotens entfernen (Beschriftung „Datierung“ braucht Platz über der Achse)
       const shift = Math.max(0, Math.min(d3.min(hier.descendants(), (n) => n.y) - (top + 10), t0 - (top + 40)));
       if (shift) { hier.each((n) => { n.y -= shift; }); ty.range(ty.range().map((v) => v - shift)); H -= shift; }
@@ -2908,6 +3232,12 @@ details.cf-places ul { margin: 2px 0; padding-left: 14px; } details.cf-places li
     lw.append('circle').attr('r', 4).attr('class', (d) => 'leaf ' + groupColorClass(d.data.w));
     if (timeOn) lw.filter((d) => dating(d.data.w)).insert('line', ':first-child').attr('class', 'dbar').attr('x1', 0).attr('x2', 0)
       .attr('y1', (d) => ty(dating(d.data.w).from) - d.y).attr('y2', (d) => ty(dating(d.data.w).to) - d.y);
+    if (timeOn) lw.filter((d) => d.lifted && dating(d.data.w)).each(function (d) {
+      const yd = ty((dating(d.data.w).from + dating(d.data.w).to) / 2) - d.y;
+      d3.select(this).insert('line', ':first-child').attr('class', 'dlift').attr('x1', 0).attr('x2', 0).attr('y1', 0).attr('y2', yd);
+      d3.select(this).append('circle').attr('class', 'dlift-dot').attr('cy', yd).attr('r', 2.5);
+      d3.select(this).append('text').attr('class', 'tick mono').attr('x', 8).attr('y', yd + 4).text(sig(d.data.w) + ' ' + fmtDate(dating(d.data.w)));
+    });
     if (timeOn) lw.append('text').attr('class', 'row-lab mono slab-w').attr('x', 8).attr('y', 4).text((d) => sig(d.data.w));
     else {
       lw.append('text').attr('class', 'row-lab mono slab-w').attr('y', (d) => (d.children ? -9 : 17)).attr('x', (d) => (d.children ? 8 : 0)).attr('text-anchor', (d) => (d.children ? 'start' : 'middle')).text((d) => sig(d.data.w));
@@ -2927,10 +3257,13 @@ details.cf-places ul { margin: 2px 0; padding-left: 14px; } details.cf-places li
       .on('mouseleave', tipHide)
       .on('click', (ev, d) => { S.stemmaSel = d.data; S.sel = null; S.combo = null; if (panelOff()) { S.panelOff[S.view] = false; applyPanel(); } renderPanel(); });
     const note = mode === 'header' ? L('Aus der Zeugenliste: verschachtelte listWit als Gruppen, gestrichelt Abschriften (@source) und Parallelüberlieferung.')
-      : mode === 'salemans' ? L('Ungerichteter Baum aus Typ-2-Variationen; Zahl an der Kante: Variationen, die diese Teilung stützen. Knoten sind hypothetische Zwischenstufen.')
+      : mode === 'salemans' ? (res.rooted ? L('Aus Typ-2-Variationen, ausgerichtet an der gewählten Wurzel; Zahl an der Kante: Variationen, die diese Teilung stützen. Knoten sind hypothetische Zwischenstufen.') : L('Ungerichteter Baum aus Typ-2-Variationen; Zahl an der Kante: Variationen, die diese Teilung stützen. Knoten sind hypothetische Zwischenstufen.'))
+
       : mode === 'dendro' ? L('Ähnlichkeit der Zeugen (UPGMA, Erklärung in der Seitenspalte); die Höhe der Verzweigung entspricht dem Anteil abweichender Lesarten.')
       : L('Vorschlag aus gemeinsamen Abweichungen vom Lemma; Zahl am Knoten: Lesarten, die genau diese Gruppe teilt. Gestrichelt: mögliche Abschrift.');
-    svg.append('text').attr('class', 'axis-note').attr('x', 40).attr('y', H - 10).text(note);
+    const lifted = hier.descendants().some((n) => n.lifted);
+    svg.append('text').attr('class', 'axis-note').attr('x', 40).attr('y', H - (lifted ? 24 : 10)).text(note);
+    if (lifted) svg.append('text').attr('class', 'axis-note').attr('x', 40).attr('y', H - 10).text(L('Ein Zeuge über jüngeren Nachkommen steht oben; gepunktet zu seiner Datierung.'));
   }
   function stemmaTip(d, mode) {
     if (mode === 'salemans') return (d.kind === 'wit' ? `<div class="tt-row"><b class="mono">${esc(sig(d.w))}</b> ${esc(witById(d.w).name)}</div>` : `<div class="tt-row mono">${d.wits.map(sig).join(' ')}</div>`) +
@@ -3274,10 +3607,11 @@ details.cf-places ul { margin: 2px 0; padding-left: 14px; } details.cf-places li
       leit: L('Abweichung vom gewählten Leitzeugen; wo er keinen Text bietet, wird nicht gewertet.'),
     })[S.ref];
     const seg = (id, val) => R.root.querySelectorAll(`[data-set="${id}"]`).forEach((b) => { const on = b.getAttribute('data-v') === String(val); b.classList.toggle('on', on); b.setAttribute('aria-pressed', on); });
-    seg('color', S.color); seg('agg', S.agg); seg('order', S.order);
+    seg('color', S.color); seg('agg', S.agg); seg('aggVal', S.aggVal); seg('order', S.order);
     const isV = (...v) => v.includes(S.view);
     R.aggWrap.hidden = !isV('raster');
-    R.colorWrap.hidden = !isV('raster');
+    R.colorWrap.hidden = !isV('raster') || (S.agg !== 'stelle');
+    R.root.querySelector('#aggval-wrap').hidden = !isV('raster') || S.agg === 'stelle';
     R.orderWrap.hidden = isV('graph', 'stemma') || (S.view === 'synopse' && S.synMode !== 'zeilen');
     R.stemmaWrap.hidden = !isV('stemma');
     R.root.querySelectorAll('[data-stemma]').forEach((b) => {
@@ -3334,7 +3668,9 @@ details.cf-places ul { margin: 2px 0; padding-left: 14px; } details.cf-places li
     if (!S.wits.size) { R.chart.innerHTML = '<p class="empty">' + L('Keine Zeugen ausgewählt. Wählen Sie oben mindestens einen Zeugen.') + '</p>'; return; }
     ({ raster: renderRaster, sankey: renderSankey, graph: renderGraph, traviz: renderTraviz, upset: renderUpset, stemma: renderStemma, synopse: renderSynopse })[S.view]();
     R.caption.title = ({
-      raster: S.agg === 'abschnitt' ? L('Raster nach Abschnitten: Dichte der Abweichungen je Zeuge und Abschnitt.') : L('Raster nach Einzelstellen: jede Abweichung vom Lemma als Markierung an ihrer Textposition.'),
+      raster: S.agg === 'stelle' ? L('Raster nach Einzelstellen: jede Abweichung vom Lemma als Markierung an ihrer Textposition.')
+        : S.aggVal === 'naehe' ? L('Nähe im Textverlauf: je Zeuge und Feld der Zeuge, mit dem er dort am häufigsten übereinstimmt. Ein Farbwechsel innerhalb einer Zeile deutet auf Vorlagenwechsel oder Kontamination.')
+        : S.agg === 'abschnitt' ? L('Raster nach Abschnitten: Dichte der Abweichungen je Zeuge und Abschnitt.') : L('Raster nach gleich großen Fenstern: Dichte der Abweichungen je Zeuge und Fenster.'),
       graph: L('Variantengraph eines Abschnitts: Knoten sind Textstücke, Kanten tragen die Siglen der Zeugen, die diesen Weg nehmen. Das Rückgrat ist die Mehrheitslesart.'),
       traviz: L('TRAViz-Darstellung eines Abschnitts: eine Linie je Zeuge; Varianten zweigen über oder unter dem gemeinsamen Text ab.'),
       synopse: ({ spalten: L('Synopse: Lemma und die gewählten Zeugen nebeneinander; gemeinsamer Text läuft über alle Spalten.'), zeilen: L('Synopse, Zeugen als Zeilen: jede Stelle eine Spalte, alle gewählten Zeugen untereinander; eingetragen sind nur die Abweichungen.'), inter: L('Synopse, interlinear: der edierte Text mit den abweichenden Lesarten der gewählten Zeugen unter der jeweiligen Stelle.') })[S.synMode],
@@ -3370,7 +3706,7 @@ details.cf-places ul { margin: 2px 0; padding-left: 14px; } details.cf-places li
   function setData(d, keep) {
     D = d;
     localizeData();
-    if (!keep) { S.passage = null; S.syn = []; S.cladRoot = ''; S.cladOff = new Set(); }
+    if (!keep) { S.passage = null; S.syn = []; S.cladRoot = ''; S.cladOff = new Set(); S.range = null; if (D.units.length > 3000 && S.agg === 'stelle') S.agg = 'fenster'; }
     showStart();
     if (!keep) { S.wits = new Set(D.witnesses.filter((w) => !w.corrOf || S.hands === 'both').map((w) => w.id)); S.sel = null; S.combo = null; S.query.clear(); }
     R.title.textContent = D.title || L('Ohne Titel');
@@ -3443,7 +3779,10 @@ details.cf-places ul { margin: 2px 0; padding-left: 14px; } details.cf-places li
     const clearErr = () => root.querySelectorAll('.load-err').forEach((el) => (el.hidden = true));
     const useText = (t, label) => {
       try { setData(PTAVariance.parse(t, undefined, PO)); clearErr(); }
-      catch (err) { showErr(L('{f} ließ sich nicht auswerten: {m} Erwartet wird eine PTA-TEI-Datei mit <app>-Apparat.', { f: label || L('Die Datei'), m: L(err.message) })); }
+      catch (err) {
+        if (err.xml) showErr(L('{f} ist kein wohlgeformtes XML. Meldung des Parsers: {m}', { f: label || L('Die Datei'), m: err.message }));
+        else showErr(L('{f} ließ sich nicht auswerten: {m} Erwartet wird eine PTA-TEI-Datei mit <app>-Apparat.', { f: label || L('Die Datei'), m: L(err.message) }));
+      }
     };
     const readFile = (f) => { if (!f) return; const fr = new FileReader(); fr.onload = () => useText(fr.result, f.name); fr.readAsText(f); };
     const resolveUrl = (inp) => {

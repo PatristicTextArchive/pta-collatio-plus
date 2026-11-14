@@ -658,13 +658,20 @@ def test_check_reports_lines_in_file(run):
     assert "διατοῦτο" in line
 
 
-def test_source_lines_across_tags(tmp_path):
+def test_token_lines_and_initial_before_choice(tmp_path):
+    src = open(os.path.join(DATA, "pta0013.pta003.pta-MsLa.xml"), encoding="utf-8").read()
+    start, end = src.index("<body>"), src.index("</body>")
+    body = ('<body><div type="edition" xml:lang="grc"><p>καὶ\n<lb/>τῶ ἀδὰμ· ὅτε\n<lb/>\n<hi rend="initial">ὁ</hi>\n'
+            '<choice>\n<expan>σωτὴρ</expan>\n<abbr type="nomSac"><hi rend="overline">σηρ</hi></abbr>\n</choice> ἐπὶ\n'
+            '<hi rend="initial">τ</hi>\nα δὲ</p></div></body>')
+    txt = src[:start] + body + src[end + 7:]
     f = tmp_path / "t.xml"
-    f.write_text('<TEI>\n<pb n="1r"/>\nκαὶ ἄλ<lb break="no"/>\nλος\n<pb n="1v"/>\nKαὶ\n</TEI>\n', encoding="utf-8")
-    assert collation.source_lines(str(f), "1r", "ἄλλος") == [3]
-    assert collation.source_lines(str(f), "1v", "Kαὶ") == [6]
-    assert collation.source_lines(str(f), "1v", "nicht da") == []
-
+    f.write_text(txt, encoding="utf-8")
+    toks = next(iter(extract.extract(str(f)).values()))
+    assert [t.t for t in toks] == ["καὶ", "τῶ", "ἀδὰμ·", "ὅτε", "ὁ", "σωτὴρ", "ἐπὶ", "τα", "δὲ"]
+    lines = txt.split("\n")
+    for t in toks:
+        assert t.t[:1] in lines[t.line - 1] or (t.t == "σωτὴρ" and "σωτὴρ" in lines[t.line - 1]), (t.t, t.line)
 
 def test_witness_date_from_history_origin(tmp_path, run):
     src = os.path.join(DATA, "pta0013.pta003.pta-MsLa.xml")

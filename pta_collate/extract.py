@@ -72,6 +72,7 @@ class Token:
     brk: int | None = None    # source line of a plain <lb/>/<cb/>/<pb/> directly before this token
     markup: list | None = None  # pc layer: the word with its <add>/<del>/<subst> (see _attach_markup)
     span: tuple | None = field(default=None, repr=False, compare=False)   # char range in the stream
+    line: int | None = None   # line in the XML file where the token begins
 
     def to_dict(self) -> dict:
         d = {"id": self.id, "wit": self.wit, "t": self.t, "page": self.page, "segment": self.segment}
@@ -85,13 +86,15 @@ class Token:
             d["brk"] = self.brk
         if self.markup:
             d["markup"] = self.markup
+        if self.line:
+            d["line"] = self.line
         return d
 
     @staticmethod
     def from_dict(d: dict) -> "Token":
         return Token(id=d["id"], wit=d["wit"], t=d["t"], page=d.get("page"), segment=d.get("segment", "0"),
                      flags=list(d.get("flags", [])), hand=d.get("hand"), gap=d.get("gap"), brk=d.get("brk"),
-                     markup=d.get("markup"))
+                     markup=d.get("markup"), line=d.get("line"))
 
 
 @dataclass
@@ -225,9 +228,12 @@ class _Stream:
         self.glue = False          # True directly after <lb break="no"/>: drop following whitespace
         self.break_line = None     # line of a plain break that may still precede the next word
         self.pending_flags: set = set()  # e.g. a <g type="diple"/> before the next word
+        self.line = 0              # current line in the XML file (set by _walk_inner/_tail)
 
     def add_text(self, text: str, flags: frozenset, hand: str | None):
         for ch in text:
+            if ch == "\n":
+                self.line += 1
             if ch.isspace():
                 if self.glue:
                     continue
@@ -238,11 +244,11 @@ class _Stream:
                     extra = set(self.pending_flags)
                     if self.break_line:
                         extra.add(f"brk:{self.break_line}")
-                    self.chars.append((ch, flags | extra, hand, self.page, self.segment))
+                    self.chars.append((ch, flags | extra, hand, self.page, self.segment, self.line))
                     self.break_line = None
                     self.pending_flags = set()
                     continue
-            self.chars.append((ch, flags, hand, self.page, self.segment))
+            self.chars.append((ch, flags, hand, self.page, self.segment, self.line))
 
     def join(self):
         """Word continues after a break (break="no"): drop whitespace before and after it."""
@@ -252,19 +258,19 @@ class _Stream:
 
     def boundary(self, break_line: int | None = None):
         if not self.glue:
-            self.chars.append((" ", frozenset(), None, self.page, self.segment))
+            self.chars.append((" ", frozenset(), None, self.page, self.segment, self.line))
         self.break_line = break_line
 
     def gap_token(self, gap: dict, flags: frozenset):
         # A gap of whole words/lines becomes its own token; a gap of characters stays in the word.
         marker = "…"
         if gap.get("unit") in ("character", "char", None) and gap.get("unit") != "word":
-            self.chars.append((marker, flags | {"gap"}, None, self.page, self.segment))
+            self.chars.append((marker, flags | {"gap"}, None, self.page, self.segment, self.line))
             self.glue = False
             return gap
         self.boundary()
         for ch in "[" + marker + "]":
-            self.chars.append((ch, flags | {"gap"}, None, self.page, self.segment))
+            self.chars.append((ch, flags | {"gap"}, None, self.page, self.segment, self.line))
         self.boundary()
         return gap
 
@@ -288,6 +294,7 @@ class _Stream:
             tok = Token(
                 id=f"{wit}:{len(toks)}", wit=wit, t=unicodedata.normalize("NFC", text),
                 page=cur[0][3], segment=cur[0][4], flags=sorted(flags), hand=hand, brk=brk,
+                line=cur[0][5] if len(cur[0]) > 5 else None,
                 span=(start[0], start[0] + len(cur) - 1),
             )
             if "gap" in flags and gi < len(gaps):
@@ -488,8 +495,18 @@ def _attach_markup(pc: "_Stream", mk: "_Stream", toks: list[Token]):
         tok.markup = [{k: v for k, v in sg.items() if v is not None} for sg in segs]
 
 
+def _end_line(el) -> int:
+    """Line of the XML file where the content of el ends (its end tag): along the last
+    children, counting the line breaks in their tails."""
+    kids = list(el)
+    if kids:
+        return _end_line(kids[-1]) + (kids[-1].tail or "").count("\n")
+    return (el.sourceline or 0) + (el.text or "").count("\n")
+
+
 def _walk_inner(el, layer, stream, flags, hand, seg_mode, gaps, nomsac):
     tag = etree.QName(el).localname
+    stream.line = el.sourceline or stream.line
     if el.text:
         if not (_is_tight(el) and not el.text.strip()):
             stream.add_text(el.text.replace(KAI_COMPENDIUM, "καὶ"), flags, hand)
@@ -504,11 +521,20 @@ def _tail(el, stream: _Stream, flags, hand):
     parent = el.getparent()
     if _is_tight(parent) and not tail.strip():
         return
+    line = _end_line(el)
     if _is_letter_hi(el):
-        # initial/ekthesis: the word goes on; only a plain space on the same line separates
+        # initial/ekthesis: the word goes on; only a plain space on the same line separates.
+        # Exception: a <choice> follows (a nomen sacrum or other abbreviation is a word of its
+        # own, as in <hi rend="initial">ὁ</hi> <choice><expan>σωτὴρ</expan>…): the line break
+        # before it is a word boundary.
         lead = tail[:len(tail) - len(tail.lstrip())]
-        if "\n" in lead:
+        nxt = el.getnext()
+        before_choice = not tail.strip() and nxt is not None and isinstance(nxt.tag, str) \
+            and etree.QName(nxt).localname == "choice"
+        if "\n" in lead and not before_choice:
+            line += lead.count("\n")
             tail = tail.lstrip()
+    stream.line = line
     # the tail belongs to the parent's context; strip correction flags of the element itself
     stream.add_text(tail.replace(KAI_COMPENDIUM, "καὶ"), frozenset(f for f in flags if f not in ("corr",)), None)
 
